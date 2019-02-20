@@ -182,6 +182,12 @@
        #:cache-length new-cache-length
        #:cache-needs-update #f))
 
+    (define (zoom s factor)
+      (update-state
+       s
+       #:zoom (* (state-zoom s) factor)
+       #:cache-needs-update #t))
+
     (define (update-bitmap s)
       (define width (state-width s))
       (define height (state-height s))
@@ -210,6 +216,18 @@
              (set! state new-state)
              (send this refresh)]
             [else (void)]))
+
+    (define/override (on-char event)
+      (cond [(eq? #\i (send event get-key-code))
+             (define new-state
+               (zoom state 0.9))
+             (set! state new-state)
+             (send this refresh)]
+            [(eq? #\o (send event get-key-code))
+             (define new-state
+               (zoom state 1.1))
+             (set! state new-state)
+             (send this refresh)]))
 
     (define/override (on-paint)
       (cond [(state-cache-needs-update state)

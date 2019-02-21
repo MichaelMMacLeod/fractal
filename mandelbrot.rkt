@@ -29,6 +29,40 @@
   (define v (modulo (* iterations 25) 255))
   (argb-color 255 v v v))
 
+(define (mandelbrot-point->color the-real-part the-imaginary-part max-iterations)
+  (get-color (escape-time the-real-part the-imaginary-part max-iterations)))
+
+(define (index->mandelbrot-point
+         index
+         width
+         height
+         center-real
+         center-imaginary
+         zoom)
+  (define x (remainder index width))
+  (define y (quotient index width))
+
+  (define the-real-part
+    (fl+ center-real
+         (fl* zoom
+              (fl- (->fl x)
+                   (fl/ (->fl width)
+                        2.0)))))
+
+  (define the-imaginary-part
+    (fl+ center-imaginary
+         (fl* zoom
+              (fl- (->fl y)
+                   (fl/ (->fl height)
+                        2.0)))))
+  (values the-real-part the-imaginary-part))
+
+(define (insert-color! bytestring index color)
+  (bytes-set! bytestring index (argb-color-a color))
+  (bytes-set! bytestring (+ index 1) (argb-color-r color))
+  (bytes-set! bytestring (+ index 2) (argb-color-g color))
+  (bytes-set! bytestring (+ index 3) (argb-color-b color)))
+
 (define (mandelbrot!
          bytestring
          bytestring-length
@@ -38,32 +72,17 @@
          height
          zoom
          max-iterations)
-  (for ([i (in-range 0 bytestring-length)]
-        [position (in-range 0 bytestring-length 4)])
-    (define x (remainder i width))
-    (define y (quotient i width))
+  (for ([index (in-range 0 (quotient bytestring-length 4))])
+    (define-values (the-real-part the-imaginary-part)
+      (index->mandelbrot-point
+       index
+       width
+       height
+       center-real
+       center-imaginary
+       zoom))
 
-    (define the-real-part
-      (fl+ center-real
-           (fl* zoom
-                (fl- (->fl x)
-                     (fl/ (->fl width)
-                          2.0)))))
+    (define color
+      (mandelbrot-point->color the-real-part the-imaginary-part max-iterations))
 
-    (define the-imaginary-part
-      (fl+ center-imaginary
-           (fl* zoom
-                (fl- (->fl y)
-                     (fl/ (->fl height)
-                          2.0)))))
-    (define iterations
-      (escape-time the-real-part
-                   the-imaginary-part
-                   max-iterations))
-
-    (define color (get-color iterations))
-
-    (bytes-set! bytestring position (argb-color-a color))
-    (bytes-set! bytestring (+ position 1) (argb-color-r color))
-    (bytes-set! bytestring (+ position 2) (argb-color-g color))
-    (bytes-set! bytestring (+ position 3) (argb-color-b color))))
+    (insert-color! bytestring (* 4 index) color)))

@@ -106,24 +106,36 @@
        #:center-real new-center-real
        #:center-imaginary new-center-imaginary))
 
-    (define (update-cache s)
-      (introduce-fields (state s)
-       width height center-real center-imaginary zoom max-iterations workers)
+    (define (generate-new-cache!)
+      (introduce-fields (state state)
+        width height)
 
       (define new-cache-length (* 4 width height))
       (define new-cache (make-shared-bytes new-cache-length 50))
+      (define new-state
+        (update-state
+         state
+         #:cache new-cache
+         #:cache-length new-cache-length
+         #:cache-needs-update #t))
 
-      (define work-length (quotient new-cache-length
+      (set! state new-state))
+
+    (define (update-cache s)
+      (introduce-fields (state s)
+       width height center-real center-imaginary zoom max-iterations workers cache cache-length)
+
+      (define work-length (quotient cache-length
                                     (length workers)))
 
       (for ([worker (in-list workers)]
             [worker-id (in-naturals)]
-            [start-index (in-range 0 new-cache-length work-length)])
+            [start-index (in-range 0 cache-length work-length)])
         (place-channel-put
          worker
          (worker-message
           worker-id
-          new-cache
+          cache
           start-index
           (+ start-index work-length)
           center-real
@@ -136,8 +148,6 @@
       (define new-state
         (update-state
          s
-         #:cache new-cache
-         #:cache-length new-cache-length
          #:cache-needs-update #f))
 
       new-state)
@@ -164,9 +174,16 @@
       (send bitmap set-argb-pixels 0 0 width height cache))
 
     (define (draw-cache s)
+      (introduce-fields (state s)
+        width height cache-length cache)
+
       (define bitmap (state-bitmap s))
       (define dc (send this get-dc))
-      (send bitmap set-argb-pixels 0 0 (state-width s) (state-height s) (state-cache s))
+
+      (cond [(= (* 4 width height) cache-length)
+             (send bitmap set-argb-pixels 0 0 width height cache)]
+            [else (void)])
+
       (send dc draw-bitmap bitmap 0 0))
 
     (define/override (on-event event)
@@ -212,7 +229,8 @@
           #:width new-width
           #:height new-height
           #:cache-needs-update #t)))
-      (set! state new-state))
+      (set! state new-state)
+      (generate-new-cache!))
 
      (thread (lambda ()
               (for ([forever (in-naturals)])

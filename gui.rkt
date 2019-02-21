@@ -25,7 +25,8 @@
    cache-length
    cache-needs-update
    bitmap
-   workers)
+   workers
+   worker-pipe)
   #:transparent
   #:constructor-name -state)
 
@@ -35,7 +36,7 @@
          #:center-real [center-real 0.0]
          #:center-imaginary [center-imaginary 0.0]
          #:zoom [zoom 0.005]
-         #:max-iterations [max-iterations 50]
+         #:max-iterations [max-iterations 500]
          #:worker-count [worker-count (processor-count)])
   (-state
    center-real
@@ -48,7 +49,10 @@
    (* 4 width height)
    #t
    (make-object bitmap% width height)
-   (create-workers worker-count)))
+   (create-workers worker-count)
+   (let ([temporary-file (make-temporary-file "worker-log-~a")])
+     (define input (open-input-file temporary-file))
+     (cons 'not-a-port temporary-file))))
 
 (define (update-state
          s
@@ -62,7 +66,8 @@
          #:cache-length [cache-length #f]
          #:cache-needs-update [cache-needs-update #f]
          #:bitmap [bitmap #f]
-         #:workers [workers #f])
+         #:workers [workers #f]
+         #:worker-pipe [worker-pipe #f])
   (-state
    (if center-real center-real (state-center-real s))
    (if center-imaginary center-imaginary (state-center-imaginary s))
@@ -74,7 +79,8 @@
    (if cache-length cache-length (state-cache-length s))
    (if cache-needs-update cache-needs-update (state-cache-needs-update s))
    (if bitmap bitmap (state-bitmap s))
-   (if workers workers (state-workers s))))
+   (if workers workers (state-workers s))
+   (if worker-pipe worker-pipe (state-worker-pipe s))))
 
 (define mandelbrot-canvas%
   (class canvas%
@@ -108,13 +114,19 @@
 
     (define (update-cache s)
       (introduce-fields (state s)
-        width height center-real center-imaginary zoom max-iterations workers)
+       width height center-real center-imaginary zoom max-iterations workers
+       worker-pipe)
+
+      (define worker-input-port (car worker-pipe))
+      (define worker-output-port (cdr worker-pipe))
 
       (define new-cache-length (* 4 width height))
       (define new-cache (make-shared-bytes new-cache-length 50))
 
       (define work-length (quotient new-cache-length
                                     (length workers)))
+
+      (port->string (open-input-file (cdr worker-pipe)))
 
       (for ([worker (in-list workers)]
             [worker-id (in-naturals)]
@@ -123,6 +135,7 @@
          worker
          (worker-message
           worker-id
+          worker-output-port
           new-cache
           start-index
           (+ start-index work-length)
@@ -133,11 +146,26 @@
           zoom
           max-iterations)))
 
-      (update-state
-       s
-       #:cache new-cache
-       #:cache-length new-cache-length
-       #:cache-needs-update #f))
+      #;(with-input-from-file (cdr worker-pipe)
+        (lambda ()
+          (let loop ([i 0])
+            (cond [(= i (length workers))
+                   (void)]
+                  [else
+                   (define id (read))
+                   (cond [(eof-object? id)
+                          (loop i)]
+                         [else
+                          (loop (+ i 1))])]))))
+
+      (define new-state
+        (update-state
+         s
+         #:cache new-cache
+         #:cache-length new-cache-length
+         #:cache-needs-update #f))
+
+      new-state)
 
     (define (zoom s factor)
       (update-state
@@ -155,21 +183,27 @@
 
       (update-state s #:bitmap new-bitmap))
 
+    (define/public (recache-bitmap!)
+      (introduce-fields (state state)
+        bitmap width height cache)
+      (send bitmap set-argb-pixels 0 0 width height cache))
+
     (define (draw-cache s)
       (define bitmap (state-bitmap s))
       (define dc (send this get-dc))
-
+      (send bitmap set-argb-pixels 0 0 (state-width s) (state-height s) (state-cache s))
       (send dc draw-bitmap bitmap 0 0))
 
     (define/override (on-event event)
       (cond [(send event button-down? 'left)
              (define new-state
-               (update-state
-                (update-center
-                 state
-                 (send event get-x)
-                 (send event get-y))
-                #:cache-needs-update #t))
+               (update-cache
+                (update-state
+                 (update-center
+                  state
+                  (send event get-x)
+                  (send event get-y))
+                #:cache-needs-update #t)))
              (set! state new-state)
              (send this refresh)]
             [else (void)]))
@@ -192,16 +226,23 @@
                (update-bitmap
                 (update-cache
                  state)))
-             (set! state new-state)
-             (draw-cache state)]
+             (set! state new-state)]
             [else (draw-cache state)]))
 
     (define/override (on-size new-width new-height)
       (define new-state
-        (update-state
-         state
-         #:width new-width
-         #:height new-height
-         #:cache-needs-update #t))
+        (update-cache
+         (update-state
+          state
+          #:width new-width
+          #:height new-height
+          #:cache-needs-update #t)))
       (set! state new-state))
+
+     (thread (lambda ()
+              (for ([forever (in-naturals)])
+                (draw-cache state)
+                (sleep 0.05)
+                )))
+
     ))

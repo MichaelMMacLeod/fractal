@@ -59,7 +59,9 @@
     [(_ (struct-id struct-expr) fields ...)
      (with-syntax ([(accessors ...)
                     (for/list ([field (in-list (syntax->list #'(fields ...)))])
-                      (format-id #'field "~a-~a"
+                      (format-id #'field
+                                 #:source #'field
+                                 "~a-~a"
                                  (syntax-e #'struct-id)
                                  (syntax-e field)))])
        #'(begin (define fields (accessors struct-expr)) ...))]))

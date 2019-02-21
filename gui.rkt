@@ -1,6 +1,10 @@
-#lang racket/gui
+#lang racket/base
 
-(require "mandelbrot.rkt" "state.rkt")
+(require "mandelbrot.rkt"
+         "state.rkt"
+         racket/class
+         racket/gui/base
+         )
 
 (provide (all-defined-out))
 

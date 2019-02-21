@@ -1,6 +1,8 @@
-#lang racket/gui
+#lang racket/base
 
-(require "gui.rkt")
+(require "gui.rkt"
+         racket/class
+         racket/gui/base)
 
 (define frame
   (new frame% [label "Mandelbrot Set Viewer"]

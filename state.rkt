@@ -1,9 +1,12 @@
-#lang racket
+#lang racket/base
 
 (require "mandelbrot.rkt"
+         racket/class
          racket/flonum
+         racket/future
+         racket/place
          (only-in racket/draw bitmap%)
-         (for-syntax racket/syntax))
+         (for-syntax racket/base racket/syntax))
 
 (provide (all-defined-out))
 

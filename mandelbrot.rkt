@@ -138,7 +138,7 @@
   (for/list ([worker-number (in-range count)])
     (place
      channel
-     (for ([forever (in-naturals)])
+     (let loop ([worker-thread #f])
        (define input (place-channel-get channel))
        (match input
          [(worker-message
@@ -152,13 +152,17 @@
            height
            zoom
            max-iterations)
-          (mandelbrot!
-           bytestring
-           start-index
-           end-index
-           center-real
-           center-imaginary
-           width
-           height
-           zoom
-           max-iterations)])))))
+          (cond [worker-thread (kill-thread worker-thread)]
+                [else (void)])
+          (loop (thread
+                 (lambda ()
+                   (mandelbrot!
+                    bytestring
+                    start-index
+                    end-index
+                    center-real
+                    center-imaginary
+                    width
+                    height
+                    zoom
+                    max-iterations))))])))))

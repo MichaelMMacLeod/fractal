@@ -65,14 +65,16 @@
 
 (define (mandelbrot!
          bytestring
-         bytestring-length
+         start-index
+         end-index
          center-real
          center-imaginary
          width
          height
          zoom
          max-iterations)
-  (for ([index (in-range 0 (quotient bytestring-length 4))])
+  (for ([index (in-range (quotient start-index 4)
+                         (quotient end-index 4))])
     (define-values (the-real-part the-imaginary-part)
       (index->mandelbrot-point
        index

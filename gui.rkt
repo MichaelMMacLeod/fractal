@@ -111,6 +111,7 @@
 
       (mandelbrot!
        new-cache
+       0
        new-cache-length
        center-real
        center-imaginary

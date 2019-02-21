@@ -8,7 +8,16 @@
 
 (provide
  (contract-out
-  [mandelbrot-canvas% (subclass?/c canvas%)]))
+  [mandelbrot-canvas%
+   (and/c
+    (subclass?/c canvas%)
+    (class/c
+     [get-draw-thread (->m thread?)]
+     [set-draw-rate (->m (>=/c 0) void?)]
+     (override [on-event (->m (is-a?/c mouse-event%) void?)]
+               [on-char (->m (is-a?/c key-event%) void?)]
+               [on-paint (->m void?)]
+               [on-size (->m dimension-integer? dimension-integer? void?)])))]))
 
 (define mandelbrot-canvas%
   (class canvas%
@@ -56,5 +65,4 @@
     (define/override (on-size new-width new-height)
       (set! state (resize/s state new-width new-height))
       (redraw-cache!/s state))
-
     ))

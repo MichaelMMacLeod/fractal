@@ -25,8 +25,7 @@
    cache-length
    cache-needs-update
    bitmap
-   workers
-   worker-pipe)
+   workers)
   #:transparent
   #:constructor-name -state)
 
@@ -49,10 +48,7 @@
    (* 4 width height)
    #t
    (make-object bitmap% width height)
-   (create-workers worker-count)
-   (let ([temporary-file (make-temporary-file "worker-log-~a")])
-     (define input (open-input-file temporary-file))
-     (cons 'not-a-port temporary-file))))
+   (create-workers worker-count)))
 
 (define (update-state
          s
@@ -66,8 +62,7 @@
          #:cache-length [cache-length #f]
          #:cache-needs-update [cache-needs-update #f]
          #:bitmap [bitmap #f]
-         #:workers [workers #f]
-         #:worker-pipe [worker-pipe #f])
+         #:workers [workers #f])
   (-state
    (if center-real center-real (state-center-real s))
    (if center-imaginary center-imaginary (state-center-imaginary s))
@@ -79,8 +74,7 @@
    (if cache-length cache-length (state-cache-length s))
    (if cache-needs-update cache-needs-update (state-cache-needs-update s))
    (if bitmap bitmap (state-bitmap s))
-   (if workers workers (state-workers s))
-   (if worker-pipe worker-pipe (state-worker-pipe s))))
+   (if workers workers (state-workers s))))
 
 (define mandelbrot-canvas%
   (class canvas%
@@ -114,19 +108,13 @@
 
     (define (update-cache s)
       (introduce-fields (state s)
-       width height center-real center-imaginary zoom max-iterations workers
-       worker-pipe)
-
-      (define worker-input-port (car worker-pipe))
-      (define worker-output-port (cdr worker-pipe))
+       width height center-real center-imaginary zoom max-iterations workers)
 
       (define new-cache-length (* 4 width height))
       (define new-cache (make-shared-bytes new-cache-length 50))
 
       (define work-length (quotient new-cache-length
                                     (length workers)))
-
-      (port->string (open-input-file (cdr worker-pipe)))
 
       (for ([worker (in-list workers)]
             [worker-id (in-naturals)]
@@ -135,7 +123,6 @@
          worker
          (worker-message
           worker-id
-          worker-output-port
           new-cache
           start-index
           (+ start-index work-length)
@@ -145,18 +132,6 @@
           height
           zoom
           max-iterations)))
-
-      #;(with-input-from-file (cdr worker-pipe)
-        (lambda ()
-          (let loop ([i 0])
-            (cond [(= i (length workers))
-                   (void)]
-                  [else
-                   (define id (read))
-                   (cond [(eof-object? id)
-                          (loop i)]
-                         [else
-                          (loop (+ i 1))])]))))
 
       (define new-state
         (update-state

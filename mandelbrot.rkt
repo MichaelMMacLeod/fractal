@@ -91,7 +91,6 @@
 
 (struct worker-message
   (id
-   done-output-port
    bytestring
    start-index
    end-index
@@ -112,7 +111,6 @@
        (match input
          [(worker-message
            id
-           done-output-file
            bytestring
            start-index
            end-index
@@ -122,17 +120,13 @@
            height
            zoom
            max-iterations)
-          (with-output-to-file done-output-file
-            (lambda ()
-              (mandelbrot!
-               bytestring
-               start-index
-               end-index
-               center-real
-               center-imaginary
-               width
-               height
-               zoom
-               max-iterations)
-              (writeln id))
-            #:exists 'append)])))))
+          (mandelbrot!
+           bytestring
+           start-index
+           end-index
+           center-real
+           center-imaginary
+           width
+           height
+           zoom
+           max-iterations)])))))

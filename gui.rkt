@@ -23,7 +23,6 @@
    height
    cache
    cache-length
-   cache-needs-update
    bitmap
    workers)
   #:transparent
@@ -46,7 +45,6 @@
    height
    (make-shared-bytes (* 4 width height) 50)
    (* 4 width height)
-   #t
    (make-object bitmap% width height)
    (create-workers worker-count)))
 
@@ -60,7 +58,6 @@
          #:height [height #f]
          #:cache [cache #f]
          #:cache-length [cache-length #f]
-         #:cache-needs-update [cache-needs-update #f]
          #:bitmap [bitmap #f]
          #:workers [workers #f])
   (-state
@@ -72,7 +69,6 @@
    (if height height (state-height s))
    (if cache cache (state-cache s))
    (if cache-length cache-length (state-cache-length s))
-   (if cache-needs-update cache-needs-update (state-cache-needs-update s))
    (if bitmap bitmap (state-bitmap s))
    (if workers workers (state-workers s))))
 

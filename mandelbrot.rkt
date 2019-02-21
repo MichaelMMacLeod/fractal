@@ -88,3 +88,44 @@
       (mandelbrot-point->color the-real-part the-imaginary-part max-iterations))
 
     (insert-color! bytestring (* 4 index) color)))
+
+(struct worker-message
+  (id
+   bytestring
+   start-index
+   end-index
+   center-real
+   center-imaginary
+   width
+   heigth
+   zoom
+   max-iterations))
+
+(define (create-workers count)
+  (for/list ([worker-number (in-range count)])
+    (place
+     channel
+     (for ([forever (in-naturals)])
+       (define input (place-channel-get channel))
+       (match input
+         [(worker-message
+           worker-number
+           bytestring
+           start-index
+           end-index
+           center-real
+           center-imaginary
+           width
+           height
+           zoom
+           max-iterations)
+          (mandelbrot!
+           bytestring
+           start-index
+           end-index
+           center-real
+           center-imaginary
+           width
+           height
+           zoom
+           max-iterations)])))))

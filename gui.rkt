@@ -24,7 +24,8 @@
    cache
    cache-length
    cache-needs-update
-   bitmap)
+   bitmap
+   workers)
   #:transparent
   #:constructor-name -state)
 
@@ -34,7 +35,8 @@
          #:center-real [center-real 0.0]
          #:center-imaginary [center-imaginary 0.0]
          #:zoom [zoom 0.005]
-         #:max-iterations [max-iterations 50])
+         #:max-iterations [max-iterations 50]
+         #:worker-count [worker-count (processor-count)])
   (-state
    center-real
    center-imaginary
@@ -45,7 +47,8 @@
    (make-shared-bytes (* 4 width height) 50)
    (* 4 width height)
    #t
-   (make-object bitmap% width height)))
+   (make-object bitmap% width height)
+   (create-workers worker-count)))
 
 (define (update-state
          s
@@ -59,7 +62,7 @@
          #:cache-length [cache-length #f]
          #:cache-needs-update [cache-needs-update #f]
          #:bitmap [bitmap #f]
-         #:place-channels [place-channels #f])
+         #:workers [workers #f])
   (-state
    (if center-real center-real (state-center-real s))
    (if center-imaginary center-imaginary (state-center-imaginary s))
@@ -70,7 +73,8 @@
    (if cache cache (state-cache s))
    (if cache-length cache-length (state-cache-length s))
    (if cache-needs-update cache-needs-update (state-cache-needs-update s))
-   (if bitmap bitmap (state-bitmap s))))
+   (if bitmap bitmap (state-bitmap s))
+   (if workers workers (state-workers s))))
 
 (define mandelbrot-canvas%
   (class canvas%
@@ -104,21 +108,30 @@
 
     (define (update-cache s)
       (introduce-fields (state s)
-        width height center-real center-imaginary zoom max-iterations)
+        width height center-real center-imaginary zoom max-iterations workers)
 
       (define new-cache-length (* 4 width height))
       (define new-cache (make-shared-bytes new-cache-length 50))
 
-      (mandelbrot!
-       new-cache
-       0
-       new-cache-length
-       center-real
-       center-imaginary
-       width
-       height
-       zoom
-       max-iterations)
+      (define work-length (quotient new-cache-length
+                                    (length workers)))
+
+      (for ([worker (in-list workers)]
+            [worker-id (in-naturals)]
+            [start-index (in-range 0 new-cache-length work-length)])
+        (place-channel-put
+         worker
+         (worker-message
+          worker-id
+          new-cache
+          start-index
+          (+ start-index work-length)
+          center-real
+          center-imaginary
+          width
+          height
+          zoom
+          max-iterations)))
 
       (update-state
        s

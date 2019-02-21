@@ -99,7 +99,8 @@
    width
    heigth
    zoom
-   max-iterations))
+   max-iterations)
+  #:prefab)
 
 (define (create-workers count)
   (for/list ([worker-number (in-range count)])
@@ -109,7 +110,7 @@
        (define input (place-channel-get channel))
        (match input
          [(worker-message
-           worker-number
+           worker-id
            bytestring
            start-index
            end-index

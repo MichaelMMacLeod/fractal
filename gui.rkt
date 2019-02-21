@@ -1,8 +1,18 @@
 #lang racket/gui
 
-(require "mandelbrot.rkt" racket/flonum)
+(require "mandelbrot.rkt" racket/flonum (for-syntax racket/syntax))
 
 (provide (all-defined-out))
+
+(define-syntax (introduce-fields stx)
+  (syntax-case stx ()
+    [(_ (struct-id struct-expr) fields ...)
+     (with-syntax ([(accessors ...)
+                    (for/list ([field (in-list (syntax->list #'(fields ...)))])
+                      (format-id #'field "~a-~a"
+                                 (syntax-e #'struct-id)
+                                 (syntax-e field)))])
+       #'(begin (define fields (accessors struct-expr)) ...))]))
 
 (struct state
   (center-real
@@ -72,11 +82,9 @@
     (define state (make-initial-state))
 
     (define (update-center s canvas-x canvas-y)
-      (define center-real (state-center-real s))
-      (define center-imaginary (state-center-imaginary s))
-      (define zoom (state-zoom s))
-      (define width (state-width s))
-      (define height (state-height s))
+      (introduce-fields (state s)
+        center-real center-imaginary zoom width height)
+
       (define new-center-real
         (fl+ center-real
              (fl* zoom
@@ -95,12 +103,9 @@
        #:center-imaginary new-center-imaginary))
 
     (define (update-cache s)
-      (define width (state-width s))
-      (define height (state-height s))
-      (define center-real (state-center-real s))
-      (define center-imaginary (state-center-imaginary s))
-      (define zoom (state-zoom s))
-      (define max-iterations (state-max-iterations s))
+      (introduce-fields (state s)
+        width height center-real center-imaginary zoom max-iterations)
+
       (define new-cache-length (* 4 width height))
       (define new-cache (make-shared-bytes new-cache-length 50))
 
@@ -127,9 +132,9 @@
        #:cache-needs-update #t))
 
     (define (update-bitmap s)
-      (define width (state-width s))
-      (define height (state-height s))
-      (define cache (state-cache s))
+      (introduce-fields (state s)
+        width height cache)
+
       (define new-bitmap (make-object bitmap% width height))
 
       (send new-bitmap set-argb-pixels 0 0 width height cache)

@@ -3,10 +3,12 @@
 (require "mandelbrot.rkt"
          "state.rkt"
          racket/class
-         racket/gui/base
-         )
+         racket/contract/base
+         racket/gui/base)
 
-(provide (all-defined-out))
+(provide
+ (contract-out
+  [mandelbrot-canvas% (subclass?/c canvas%)]))
 
 (define mandelbrot-canvas%
   (class canvas%

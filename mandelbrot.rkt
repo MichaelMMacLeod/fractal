@@ -1,10 +1,40 @@
 #lang racket/base
 
-(require racket/flonum
-         racket/place
-         racket/match)
+(require racket/contract/base
+         racket/flonum
+         racket/match
+         racket/place)
 
-(provide (all-defined-out))
+(provide
+ (contract-out
+  (struct argb-color
+    ([a exact-nonnegative-integer?]
+     [r exact-nonnegative-integer?]
+     [g exact-nonnegative-integer?]
+     [b exact-nonnegative-integer?]))
+  [mandelbrot!
+   (-> bytes?
+       exact-nonnegative-integer?
+       exact-nonnegative-integer?
+       flonum?
+       flonum?
+       exact-nonnegative-integer?
+       exact-nonnegative-integer?
+       flonum?
+       exact-nonnegative-integer?
+       void?)]
+  (struct worker-message
+    ([id exact-nonnegative-integer?]
+     [bytestring bytes?]
+     [start-index exact-nonnegative-integer?]
+     [end-index exact-nonnegative-integer?]
+     [center-real flonum?]
+     [center-imaginary flonum?]
+     [width exact-nonnegative-integer?]
+     [height exact-nonnegative-integer?]
+     [zoom flonum?]
+     [max-iterations exact-nonnegative-integer?]))
+  [create-workers (-> exact-nonnegative-integer? (listof place?))]))
 
 (define (escape-time center-real center-imaginary max-iterations)
   (let loop ([z-real 0.0]
@@ -99,7 +129,7 @@
    center-real
    center-imaginary
    width
-   heigth
+   height
    zoom
    max-iterations)
   #:prefab)

@@ -2,13 +2,57 @@
 
 (require "mandelbrot.rkt"
          racket/class
+         racket/contract/base
          racket/flonum
          racket/future
          racket/place
          (only-in racket/draw bitmap%)
          (for-syntax racket/base racket/syntax))
 
-(provide (all-defined-out))
+(provide
+ (contract-out
+  (struct state
+    ([center-real flonum?]
+     [center-imaginary flonum?]
+     [zoom flonum?]
+     [max-iterations exact-nonnegative-integer?]
+     [width exact-nonnegative-integer?]
+     [height exact-nonnegative-integer?]
+     [cache bytes?]
+     [cache-length exact-nonnegative-integer?]
+     [bitmap (is-a?/c bitmap%)]
+     [workers (listof place?)])
+    #:omit-constructor)
+  [make-state
+   (->* (exact-nonnegative-integer? exact-nonnegative-integer?)
+        (#:center-real flonum?
+         #:center-imaginary flonum?
+         #:zoom flonum?
+         #:max-iterations exact-nonnegative-integer?
+         #:worker-count exact-positive-integer?)
+        state?)]
+  [update-state
+   (->* (state?)
+        (#:center-real flonum?
+         #:center-imaginary flonum?
+         #:zoom flonum?
+         #:max-iterations exact-nonnegative-integer?
+         #:width exact-nonnegative-integer?
+         #:height exact-nonnegative-integer?
+         #:cache bytes?
+         #:cache-length exact-nonnegative-integer?
+         #:bitmap (is-a?/c bitmap%)
+         #:workers (listof place?))
+        state?)]
+  [move-center/s
+   (-> state? exact-nonnegative-integer? exact-nonnegative-integer? state?)]
+  [generate-new-cache/s (-> state? state?)]
+  [redraw-cache!/s (-> state? state?)]
+  [zoom/s (-> state? flonum? state?)]
+  [generate-new-bitmap/s (-> state? state?)]
+  [redraw-bitmap!/s (-> state? state?)]
+  [resize/s
+   (-> state? exact-nonnegative-integer? exact-nonnegative-integer? state?)]))
 
 (define-syntax (introduce-fields stx)
   (syntax-case stx ()

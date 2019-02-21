@@ -76,166 +76,131 @@
    (if bitmap bitmap (state-bitmap s))
    (if workers workers (state-workers s))))
 
+(define (move-center/s state screen-x screen-y)
+  (introduce-fields
+   (state state)
+   center-real center-imaginary zoom width height)
+
+  (define new-center-real
+    (fl+ center-real
+         (fl* zoom
+              (fl- (->fl screen-x)
+                   (fl/ (->fl width)
+                        2.0)))))
+  (define new-center-imaginary
+    (fl+ center-imaginary
+         (fl* zoom
+              (fl- (->fl screen-y)
+                   (fl/ (->fl height)
+                        2.0)))))
+
+  (update-state
+   state
+   #:center-real new-center-real
+   #:center-imaginary new-center-imaginary))
+
+(define (generate-new-cache/s state)
+  (introduce-fields
+   (state state)
+   width height)
+
+  (define new-cache-length (* 4 width height))
+  (define new-cache (make-shared-bytes new-cache-length 50))
+
+  (update-state
+   state
+   #:cache new-cache
+   #:cache-length new-cache-length))
+
+(define (redraw-cache!/s state)
+  (introduce-fields
+   (state state)
+   width height center-real center-imaginary zoom max-iterations workers
+   cache cache-length)
+
+  (define work-length (quotient cache-length (length workers)))
+
+  (for ([worker (in-list workers)]
+        [worker-id (in-naturals)]
+        [start-index (in-range 0 cache-length work-length)])
+    (place-channel-put
+     worker
+     (worker-message
+      worker-id
+      cache
+      start-index
+      (+ start-index work-length)
+      center-real
+      center-imaginary
+      width
+      height
+      zoom
+      max-iterations)))
+
+  state)
+
+(define (zoom/s state zoom-factor)
+  (update-state
+   state
+   #:zoom (* (state-zoom state) zoom-factor)))
+
+(define (generate-new-bitmap/s state)
+  (introduce-fields
+   (state state)
+   width height cache)
+
+  (define new-bitmap (make-object bitmap% width height))
+
+  (send new-bitmap set-argb-pixels 0 0 width height cache)
+
+  (update-state state #:bitmap new-bitmap))
+
+(define (redraw-bitmap!/s state)
+  (introduce-fields
+   (state state)
+   bitmap width height cache)
+
+  (send bitmap set-argb-pixels 0 0 width height cache)
+
+  state)
+
+(define (resize/s state new-width new-height)
+  (generate-new-bitmap/s
+   (generate-new-cache/s
+    (update-state state #:width new-width #:height new-height))))
+
 (define mandelbrot-canvas%
   (class canvas%
     (super-new)
 
-    (define (make-initial-state)
-      (make-state 600 600))
-
-    (define state (make-initial-state))
-
-    (define (update-center s canvas-x canvas-y)
-      (introduce-fields (state s)
-        center-real center-imaginary zoom width height)
-
-      (define new-center-real
-        (fl+ center-real
-             (fl* zoom
-                  (fl- (->fl canvas-x)
-                       (fl/ (->fl width)
-                            2.0)))))
-      (define new-center-imaginary
-        (fl+ center-imaginary
-             (fl* zoom
-                  (fl- (->fl canvas-y)
-                       (fl/ (->fl height)
-                            2.0)))))
-      (update-state
-       s
-       #:center-real new-center-real
-       #:center-imaginary new-center-imaginary))
-
-    (define (generate-new-cache!)
-      (introduce-fields (state state)
-        width height)
-
-      (define new-cache-length (* 4 width height))
-      (define new-cache (make-shared-bytes new-cache-length 50))
-      (define new-state
-        (update-state
-         state
-         #:cache new-cache
-         #:cache-length new-cache-length
-         #:cache-needs-update #t))
-
-      (set! state new-state))
-
-    (define (update-cache s)
-      (introduce-fields (state s)
-       width height center-real center-imaginary zoom max-iterations workers cache cache-length)
-
-      (define work-length (quotient cache-length
-                                    (length workers)))
-
-      (for ([worker (in-list workers)]
-            [worker-id (in-naturals)]
-            [start-index (in-range 0 cache-length work-length)])
-        (place-channel-put
-         worker
-         (worker-message
-          worker-id
-          cache
-          start-index
-          (+ start-index work-length)
-          center-real
-          center-imaginary
-          width
-          height
-          zoom
-          max-iterations)))
-
-      (define new-state
-        (update-state
-         s
-         #:cache-needs-update #f))
-
-      new-state)
-
-    (define (zoom s factor)
-      (update-state
-       s
-       #:zoom (* (state-zoom s) factor)
-       #:cache-needs-update #t))
-
-    (define (update-bitmap s)
-      (introduce-fields (state s)
-        width height cache)
-
-      (define new-bitmap (make-object bitmap% width height))
-
-      (send new-bitmap set-argb-pixels 0 0 width height cache)
-
-      (update-state s #:bitmap new-bitmap))
-
-    (define/public (recache-bitmap!)
-      (introduce-fields (state state)
-        bitmap width height cache)
-      (send bitmap set-argb-pixels 0 0 width height cache))
-
-    (define (draw-cache s)
-      (introduce-fields (state s)
-        width height cache-length cache)
-
-      (define bitmap (state-bitmap s))
-      (define dc (send this get-dc))
-
-      (cond [(= (* 4 width height) cache-length)
-             (send bitmap set-argb-pixels 0 0 width height cache)]
-            [else (void)])
-
-      (send dc draw-bitmap bitmap 0 0))
+    (define state (make-state 600 600))
 
     (define/override (on-event event)
       (cond [(send event button-down? 'left)
-             (define new-state
-               (update-cache
-                (update-state
-                 (update-center
-                  state
-                  (send event get-x)
-                  (send event get-y))
-                #:cache-needs-update #t)))
-             (set! state new-state)
-             (send this refresh)]
+             (define x (send event get-x))
+             (define y (send event get-y))
+             (set! state (move-center/s state x y))
+             (redraw-cache!/s state)]
             [else (void)]))
 
     (define/override (on-char event)
       (cond [(eq? #\i (send event get-key-code))
-             (define new-state
-               (zoom state 0.9))
-             (set! state new-state)
-             (send this refresh)]
+             (set! state (zoom/s state 0.9))
+             (redraw-cache!/s state)]
             [(eq? #\o (send event get-key-code))
-             (define new-state
-               (zoom state 1.1))
-             (set! state new-state)
-             (send this refresh)]))
+             (set! state (zoom/s state 1.1))
+             (redraw-cache!/s state)]))
 
     (define/override (on-paint)
-      (cond [(state-cache-needs-update state)
-             (define new-state
-               (update-bitmap
-                (update-cache
-                 state)))
-             (set! state new-state)]
-            [else (draw-cache state)]))
+      (define dc (send this get-dc))
+      (send dc draw-bitmap (state-bitmap state) 0 0))
 
     (define/override (on-size new-width new-height)
-      (define new-state
-        (update-cache
-         (update-state
-          state
-          #:width new-width
-          #:height new-height
-          #:cache-needs-update #t)))
-      (set! state new-state)
-      (generate-new-cache!))
+      (set! state (resize/s state new-width new-height))
+      (redraw-cache!/s state))
 
-     (thread (lambda ()
+    (thread (lambda ()
               (for ([forever (in-naturals)])
-                (draw-cache state)
-                (sleep 0.05)
-                )))
-
-    ))
+                (redraw-bitmap!/s state)
+                (send this on-paint)
+                (sleep 0.05))))))

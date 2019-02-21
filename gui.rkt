@@ -16,6 +16,23 @@
 
     (define state (make-state 600 600))
 
+    (define draw-rate 0.05)
+
+    (define draw-thread (create-draw-thread))
+
+    (define/public (get-draw-thread)
+      draw-thread)
+
+    (define/public (create-draw-thread)
+      (thread (lambda ()
+                (for ([forever (in-naturals)])
+                  (redraw-bitmap!/s state)
+                  (send this on-paint)
+                  (sleep draw-rate)))))
+
+    (define/public (set-draw-rate new-draw-rate)
+      (set! draw-rate new-draw-rate))
+
     (define/override (on-event event)
       (cond [(send event button-down? 'left)
              (define x (send event get-x))
@@ -40,8 +57,4 @@
       (set! state (resize/s state new-width new-height))
       (redraw-cache!/s state))
 
-    (thread (lambda ()
-              (for ([forever (in-naturals)])
-                (redraw-bitmap!/s state)
-                (send this on-paint)
-                (sleep 0.05))))))
+    ))

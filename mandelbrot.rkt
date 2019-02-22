@@ -58,7 +58,10 @@
 (struct argb-color (a r g b))
 
 (define (get-color iterations)
-  (define v (modulo (* iterations 25) 255))
+  (define v
+    (cond [(> iterations 255)
+           (- 255 (modulo iterations 255))]
+          [else iterations]))
   (argb-color 255 v v v))
 
 (define (mandelbrot-point->color the-real-part the-imaginary-part max-iterations)

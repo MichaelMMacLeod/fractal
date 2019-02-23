@@ -4,7 +4,7 @@
 
 (provide (struct-out argb-color) painter?  painter-builder?)
 
-(struct argb-color (a r g b))
+(struct argb-color (a r g b) #:prefab)
 
 (define painter? any/c)
 

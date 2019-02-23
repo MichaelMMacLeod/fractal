@@ -5,6 +5,7 @@
          racket/contract/base
          racket/flonum
          racket/match
+         racket/performance-hint
          racket/place)
 
 (provide
@@ -22,10 +23,10 @@
        painter?
        void?)]))
 
-(define (row-major-index->point index width)
+(define-inline (row-major-index->point index width)
   (values (remainder index width) (quotient index width)))
 
-(define (screen-point->complex-point
+(define-inline (screen-point->complex-point
          x y
          center-real center-imaginary
          width height
@@ -41,7 +42,8 @@
                          (fl/ (->fl height)
                               2.0))))))
 
-(define (insert-argb-color! bytestring index color)
+
+(define-inline (insert-argb-color! bytestring index color)
   (define pos (* index 4))
   (bytes-set! bytestring pos (argb-color-a color))
   (bytes-set! bytestring (+ pos 1) (argb-color-r color))

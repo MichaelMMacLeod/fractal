@@ -1,6 +1,14 @@
 #lang racket/base
 
-(require "iterator.rkt" racket/contract/base racket/flonum racket/match)
+(require "iterator.rkt" 
+         racket/contract/base 
+         (rename-in racket/unsafe/ops
+                    [unsafe-fl+ fl+]
+                    [unsafe-fl- fl-]
+                    [unsafe-fl* fl*]
+                    [unsafe-flsqrt flsqrt]
+                    [unsafe-fl>= fl>=])
+         racket/match)
 
 (provide (contract-out [build-iterator iterator-builder?]))
 

@@ -2,12 +2,8 @@
 
 (require racket/contract/base)
 
-(provide 
- (contract-out [iterator? contract?] 
-               [iterator-builder? contract?]))
+(provide iterator? iterator-builder?)
 
-(define iterator?
-  (-> flonum? flonum? exact-nonnegative-integer?))
+(define iterator? any/c)
 
-(define iterator-builder?
-  (-> (hash/c symbol? any/c) iterator?))
+(define iterator-builder? any/c)

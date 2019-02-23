@@ -22,13 +22,28 @@
   (class canvas%
     (super-new)
 
-    (define state (make-state 600 600
-                              "./iterators/mandelbrot.rkt"
-                              "./painters/grayscale.rkt"
-                              (hash 'max-iterations 500)
-                              (hash)))
+    (init-field 
+     iterator-path
+     painter-path
+     iterator-info
+     painter-info
+     center-real
+     center-imaginary
+     zoom
+     worker-count
+     draw-rate)
 
-    (define draw-rate 0.05)
+    (define state 
+      (make-state (send this get-width)
+                  (send this get-height)
+                  iterator-path
+                  painter-path
+                  iterator-info
+                  painter-info
+                  #:center-real center-real
+                  #:center-imaginary center-imaginary
+                  #:zoom zoom
+                  #:worker-count worker-count))
 
     (define draw-thread (create-draw-thread))
 

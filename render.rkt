@@ -7,8 +7,8 @@
          racket/match
          racket/place)
 
-(provide 
- (contract-out 
+(provide
+ (contract-out
   [render-part!
    (-> bytes?
        exact-nonnegative-integer?
@@ -42,10 +42,11 @@
                               2.0))))))
 
 (define (insert-argb-color! bytestring index color)
-  (bytes-set! bytestring index (argb-color-a color))
-  (bytes-set! bytestring (+ index 1) (argb-color-r color))
-  (bytes-set! bytestring (+ index 2) (argb-color-g color))
-  (bytes-set! bytestring (+ index 3) (argb-color-b color)))
+  (define pos (* index 4))
+  (bytes-set! bytestring pos (argb-color-a color))
+  (bytes-set! bytestring (+ pos 1) (argb-color-r color))
+  (bytes-set! bytestring (+ pos 2) (argb-color-g color))
+  (bytes-set! bytestring (+ pos 3) (argb-color-b color)))
 
 (define (render-part!
          bytestring

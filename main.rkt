@@ -9,7 +9,7 @@
        [width 600]
        [height 600]))
 
-(define mandelbrot-canvas (new mandelbrot-canvas% [parent frame]))
-(send mandelbrot-canvas focus)
+(define fractal-canvas (new fractal-canvas% [parent frame]))
+(send fractal-canvas focus)
 
 (send frame show #t)

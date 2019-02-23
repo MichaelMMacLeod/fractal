@@ -1,13 +1,13 @@
 #lang racket/base
 
-(require "mandelbrot.rkt"
+(require "workers.rkt"
          racket/class
          racket/contract/base
          racket/flonum
-         racket/future
+         racket/match
          racket/place
-         (only-in racket/draw bitmap%)
-         (for-syntax racket/base racket/syntax))
+         racket/serialize
+         (only-in racket/draw bitmap%))
 
 (provide
  (contract-out
@@ -15,120 +15,90 @@
     ([center-real flonum?]
      [center-imaginary flonum?]
      [zoom flonum?]
-     [max-iterations exact-nonnegative-integer?]
      [width exact-nonnegative-integer?]
      [height exact-nonnegative-integer?]
      [cache bytes?]
      [cache-length exact-nonnegative-integer?]
      [bitmap (is-a?/c bitmap%)]
-     [workers (listof place?)])
+     [workers (listof place?)]
+     [iterator-info (hash/c symbol? any/c)]
+     [painter-info (hash/c symbol? any/c)])
     #:omit-constructor)
   [make-state
-   (->* (exact-nonnegative-integer? exact-nonnegative-integer?)
+   (->* (exact-nonnegative-integer?
+         exact-nonnegative-integer?
+         module-path?
+         module-path?
+         (hash/c symbol? any/c)
+         (hash/c symbol? any/c))
         (#:center-real flonum?
          #:center-imaginary flonum?
          #:zoom flonum?
-         #:max-iterations exact-nonnegative-integer?
          #:worker-count exact-positive-integer?)
         state?)]
-  [update-state
-   (->* (state?)
-        (#:center-real flonum?
-         #:center-imaginary flonum?
-         #:zoom flonum?
-         #:max-iterations exact-nonnegative-integer?
-         #:width exact-nonnegative-integer?
-         #:height exact-nonnegative-integer?
-         #:cache bytes?
-         #:cache-length exact-nonnegative-integer?
-         #:bitmap (is-a?/c bitmap%)
-         #:workers (listof place?))
-        state?)]
-  [move-center/s
-   (-> state? exact-nonnegative-integer? exact-nonnegative-integer? state?)]
-  [generate-new-cache/s (-> state? state?)]
-  [redraw-cache!/s (-> state? state?)]
-  [zoom/s (-> state? flonum? state?)]
-  [generate-new-bitmap/s (-> state? state?)]
-  [redraw-bitmap!/s (-> state? state?)]
-  [resize/s
-   (-> state? exact-nonnegative-integer? exact-nonnegative-integer? state?)]))
-
-(define-syntax (introduce-fields stx)
-  (syntax-case stx ()
-    [(_ (struct-id struct-expr) fields ...)
-     (with-syntax ([(accessors ...)
-                    (for/list ([field (in-list (syntax->list #'(fields ...)))])
-                      (format-id #'field
-                                 #:source #'field
-                                 "~a-~a"
-                                 (syntax-e #'struct-id)
-                                 (syntax-e field)))])
-       #'(begin (define fields (accessors struct-expr)) ...))]))
+  [move-center/state
+   (-> state?
+       exact-nonnegative-integer?
+       exact-nonnegative-integer?
+       state?)]
+  [generate-new-cache/state (-> state? state?)]
+  [redraw-cache!/state (-> state? state?)]
+  [zoom/state (-> state? flonum? state?)]
+  [generate-new-bitmap/state (-> state? state?)]
+  [redraw-bitmap!/state (-> state? state?)]
+  [resize/state
+   (-> state?
+       exact-nonnegative-integer?
+       exact-nonnegative-integer?
+       state?)]))
 
 (struct state
   (center-real
    center-imaginary
    zoom
-   max-iterations
    width
    height
    cache
    cache-length
    bitmap
-   workers)
-  #:transparent
+   workers
+   iterator-info
+   painter-info)
   #:constructor-name -state)
 
 (define (make-state
          width
          height
+         iterator-path
+         painter-path
+         iterator-info
+         painter-info
          #:center-real [center-real 0.0]
          #:center-imaginary [center-imaginary 0.0]
          #:zoom [zoom 0.005]
-         #:max-iterations [max-iterations 500]
          #:worker-count [worker-count (processor-count)])
+  (define cache-length (* 4 width height))
   (-state
    center-real
    center-imaginary
    zoom
-   max-iterations
    width
    height
-   (make-shared-bytes (* 4 width height) 50)
-   (* 4 width height)
+   (make-shared-bytes cache-length 50)
+   cache-length
    (make-object bitmap% width height)
-   (create-workers worker-count)))
+   (create-workers iterator-path painter-path worker-count)
+   iterator-info
+   painter-info))
 
-(define (update-state
-         s
-         #:center-real [center-real #f]
-         #:center-imaginary [center-imaginary #f]
-         #:zoom [zoom #f]
-         #:max-iterations [max-iterations #f]
-         #:width [width #f]
-         #:height [height #f]
-         #:cache [cache #f]
-         #:cache-length [cache-length #f]
-         #:bitmap [bitmap #f]
-         #:workers [workers #f])
-  (-state
-   (if center-real center-real (state-center-real s))
-   (if center-imaginary center-imaginary (state-center-imaginary s))
-   (if zoom zoom (state-zoom s))
-   (if max-iterations max-iterations (state-max-iterations s))
-   (if width width (state-width s))
-   (if height height (state-height s))
-   (if cache cache (state-cache s))
-   (if cache-length cache-length (state-cache-length s))
-   (if bitmap bitmap (state-bitmap s))
-   (if workers workers (state-workers s))))
-
-(define (move-center/s state screen-x screen-y)
-  (introduce-fields
-   (state state)
-   center-real center-imaginary zoom width height)
-
+(define (move-center/state s screen-x screen-y)
+  (match-define
+    (struct* state ([width width]
+                    [height height]
+                    [center-real center-real]
+                    [center-imaginary center-imaginary]
+                    [zoom zoom]))
+    s)
   (define new-center-real
     (fl+ center-real
          (fl* zoom
@@ -141,78 +111,82 @@
               (fl- (->fl screen-y)
                    (fl/ (->fl height)
                         2.0)))))
+  (struct-copy state s
+              [center-real new-center-real]
+              [center-imaginary new-center-imaginary]))
 
-  (update-state
-   state
-   #:center-real new-center-real
-   #:center-imaginary new-center-imaginary))
-
-(define (generate-new-cache/s state)
-  (introduce-fields
-   (state state)
-   width height)
-
+(define (generate-new-cache/state s)
+  (match-define
+    (struct* state ([width width] [height height]))
+    s)
   (define new-cache-length (* 4 width height))
   (define new-cache (make-shared-bytes new-cache-length 50))
+  (struct-copy state s
+               [cache new-cache]
+               [cache-length new-cache-length]))
 
-  (update-state
-   state
-   #:cache new-cache
-   #:cache-length new-cache-length))
-
-(define (redraw-cache!/s state)
-  (introduce-fields
-   (state state)
-   width height center-real center-imaginary zoom max-iterations workers
-   cache cache-length)
-
+(define (redraw-cache!/state s)
+  (match-define
+    (struct* state
+             ([width width]
+              [height height]
+              [center-real center-real]
+              [center-imaginary center-imaginary]
+              [zoom zoom]
+              [workers workers]
+              [cache cache]
+              [cache-length cache-length]
+              [iterator-info iterator-info]
+              [painter-info painter-info]))
+    s)
   (define work-length (quotient cache-length (length workers)))
-
   (for ([worker (in-list workers)]
-        [worker-id (in-naturals)]
         [start-index (in-range 0 cache-length work-length)])
-    (place-channel-put
-     worker
-     (worker-message
-      worker-id
-      cache
-      start-index
-      (+ start-index work-length)
-      center-real
-      center-imaginary
-      width
-      height
-      zoom
-      max-iterations)))
+    (define message
+      (worker-message
+       cache
+       start-index
+       (+ start-index work-length)
+       center-real
+       center-imaginary
+       width
+       height
+       zoom
+       ;; We use serialize here to avoid a sigsev relating to prefab structs with contracts
+       ;; and hash maps. For more information, see these issues:
+       ;;  - https://github.com/racket/racket/issues/2504
+       ;;  - (possibly related) https://github.com/racket/racket/issues/2298
+       (serialize iterator-info)
+       (serialize painter-info)))
+    (place-channel-put worker message))
+  s)
 
-  state)
+(define (zoom/state s zoom-factor)
+  (struct-copy state s
+               [zoom (* (state-zoom s) zoom-factor)]))
 
-(define (zoom/s state zoom-factor)
-  (update-state
-   state
-   #:zoom (* (state-zoom state) zoom-factor)))
-
-(define (generate-new-bitmap/s state)
-  (introduce-fields
-   (state state)
-   width height cache)
-
+(define (generate-new-bitmap/state s)
+  (match-define
+    (struct* state ([bitmap bitmap]
+                    [width width]
+                    [height height]
+                    [cache cache]))
+    s)
   (define new-bitmap (make-object bitmap% width height))
-
   (send new-bitmap set-argb-pixels 0 0 width height cache)
+  (struct-copy state s [bitmap new-bitmap]))
 
-  (update-state state #:bitmap new-bitmap))
-
-(define (redraw-bitmap!/s state)
-  (introduce-fields
-   (state state)
-   bitmap width height cache)
-
+(define (redraw-bitmap!/state s)
+  (match-define
+    (struct* state ([bitmap bitmap]
+                    [width width]
+                    [height height]
+                    [cache cache]))
+    s)
   (send bitmap set-argb-pixels 0 0 width height cache)
+  s)
 
-  state)
-
-(define (resize/s state new-width new-height)
-  (generate-new-bitmap/s
-   (generate-new-cache/s
-    (update-state state #:width new-width #:height new-height))))
+(define (resize/state s new-width new-height)
+  (generate-new-bitmap/state
+   (generate-new-cache/state
+    (struct-copy state s [width new-width] [height new-height]))))

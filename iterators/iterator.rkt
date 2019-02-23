@@ -4,7 +4,7 @@
 
 (provide 
  (contract-out [iterator? contract?] 
-               [iterator-builder?  contract?]))
+               [iterator-builder? contract?]))
 
 (define iterator?
   (-> flonum? flonum? exact-nonnegative-integer?))

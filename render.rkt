@@ -27,10 +27,10 @@
   (values (remainder index width) (quotient index width)))
 
 (define-inline (screen-point->complex-point
-         x y
-         center-real center-imaginary
-         width height
-         zoom)
+                x y
+                center-real center-imaginary
+                width height
+                zoom)
   (values (fl+ center-real
                (fl* zoom
                     (fl- (->fl x)

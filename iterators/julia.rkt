@@ -22,9 +22,7 @@
                 [iterations 0])
        (define z-real-square (fl* z-real z-real))
        (define z-imaginary-square (fl* z-imaginary z-imaginary))
-       (cond [(or (fl>= (flsqrt (fl+ z-real-square
-                                     z-imaginary-square))
-                        2.0)
+       (cond [(or (fl>= (fl+ z-real-square z-imaginary-square) 4.0)
                   (>= iterations max-iterations))
               iterations]
              [else (loop (fl+ (fl- z-real-square

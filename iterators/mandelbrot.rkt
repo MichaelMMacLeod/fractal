@@ -1,7 +1,7 @@
 #lang racket/base
 
-(require "iterator.rkt" 
-         racket/contract/base 
+(require "iterator.rkt"
+         racket/contract/base
          (rename-in racket/unsafe/ops
                     [unsafe-fl+ fl+]
                     [unsafe-fl- fl-]

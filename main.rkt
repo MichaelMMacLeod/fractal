@@ -9,8 +9,7 @@
 
 (define the-iterator-path (make-parameter "mandelbrot"))
 (define the-painter-path (make-parameter "grayscale"))
-(define the-iterator-info (make-parameter (hash 'max-iterations 500)))
-(define the-painter-info (make-parameter (hash)))
+(define the-info (make-parameter (hash 'max-iterations 500)))
 (define the-width (make-parameter 600))
 (define the-height (make-parameter 600))
 (define the-center-real (make-parameter 0.0))
@@ -53,16 +52,11 @@
   ""
   (the-draw-rate (read (open-input-string draw-rate)))]
  #:multi
- (["-i" "--iterator-info"] key value 
+ (["-i" "--info"] key value
   ""
-  (the-iterator-info (hash-set (the-iterator-info) 
-                               (string->symbol key) 
-                               (read (open-input-string value)))))
- (["-p" "--painter-info"] key value
-  ""
-  (the-painter-info (hash-set (the-painter-info) 
-                              (string->symbol key)
-                              (read (open-input-string value))))))
+  (the-info (hash-set (the-info)
+                      (string->symbol key)
+                      (read (open-input-string value))))))
 
 (cond [(equal? (the-iterator-path) "mandelbrot")
        (the-iterator-path "./iterators/mandelbrot.rkt")]
@@ -77,18 +71,17 @@
       [else (void)])
 
 (define frame
-  (new frame% 
+  (new frame%
        [label "Mandelbrot Set Viewer"]
        [width (the-width)]
        [height (the-height)]))
 
-(define fractal-canvas 
-  (new fractal-canvas% 
+(define fractal-canvas
+  (new fractal-canvas%
        [parent frame]
        [iterator-path (the-iterator-path)]
        [painter-path (the-painter-path)]
-       [iterator-info (the-iterator-info)]
-       [painter-info (the-painter-info)]
+       [info (the-info)]
        [center-real (the-center-real)]
        [center-imaginary (the-center-imaginary)]
        [zoom (the-zoom)]

@@ -22,24 +22,22 @@
   (class canvas%
     (super-new)
 
-    (init-field 
+    (init-field
      iterator-path
      painter-path
-     iterator-info
-     painter-info
+     info
      center-real
      center-imaginary
      zoom
      worker-count
      draw-rate)
 
-    (define state 
+    (define state
       (make-state (send this get-width)
                   (send this get-height)
                   iterator-path
                   painter-path
-                  iterator-info
-                  painter-info
+                  info
                   #:center-real center-real
                   #:center-imaginary center-imaginary
                   #:zoom zoom

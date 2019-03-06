@@ -20,8 +20,7 @@
      [width exact-nonnegative-integer?]
      [height exact-nonnegative-integer?]
      [zoom flonum?]
-     [iterator-info any/c]
-     [painter-info any/c]))
+     [info any/c]))
   [create-workers
    (-> module-path? module-path? exact-positive-integer? (listof place?))]))
 
@@ -31,8 +30,7 @@
    center-real center-imaginary
    width height
    zoom
-   iterator-info
-   painter-info)
+   info)
   #:prefab)
 
 (define (create-workers iterator-path painter-path count)
@@ -49,8 +47,8 @@
            center-real center-imaginary
            width height
            zoom
-           iterator-info
-           painter-info)
+           info)
+          (define deserialized-info (deserialize info))
           (cond [worker-thread (kill-thread worker-thread)]
                 [else (void)])
           (loop (thread
@@ -61,5 +59,5 @@
                    center-real center-imaginary
                    width height
                    zoom
-                   (build-iterator (deserialize iterator-info))
-                   (build-painter (deserialize painter-info))))))])))))
+                   (build-iterator deserialized-info)
+                   (build-painter deserialized-info)))))])))))

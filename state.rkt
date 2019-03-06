@@ -21,15 +21,13 @@
      [cache-length exact-nonnegative-integer?]
      [bitmap (is-a?/c bitmap%)]
      [workers (listof place?)]
-     [iterator-info (hash/c symbol? any/c)]
-     [painter-info (hash/c symbol? any/c)])
+     [info (hash/c symbol? any/c)])
     #:omit-constructor)
   [make-state
    (->* (exact-nonnegative-integer?
          exact-nonnegative-integer?
          module-path?
          module-path?
-         (hash/c symbol? any/c)
          (hash/c symbol? any/c))
         (#:center-real flonum?
          #:center-imaginary flonum?
@@ -62,8 +60,7 @@
    cache-length
    bitmap
    workers
-   iterator-info
-   painter-info)
+   info)
   #:constructor-name -state)
 
 (define (make-state
@@ -71,8 +68,7 @@
          height
          iterator-path
          painter-path
-         iterator-info
-         painter-info
+         info
          #:center-real [center-real 0.0]
          #:center-imaginary [center-imaginary 0.0]
          #:zoom [zoom 0.005]
@@ -88,8 +84,7 @@
    cache-length
    (make-object bitmap% width height)
    (create-workers iterator-path painter-path worker-count)
-   iterator-info
-   painter-info))
+   info))
 
 (define (move-center/state s screen-x screen-y)
   (match-define
@@ -136,8 +131,7 @@
               [workers workers]
               [cache cache]
               [cache-length cache-length]
-              [iterator-info iterator-info]
-              [painter-info painter-info]))
+              [info info]))
     s)
   (define work-length (quotient cache-length (length workers)))
   (for ([worker (in-list workers)]
@@ -156,8 +150,7 @@
        ;; and hash maps. For more information, see these issues:
        ;;  - https://github.com/racket/racket/issues/2504
        ;;  - (possibly related) https://github.com/racket/racket/issues/2298
-       (serialize iterator-info)
-       (serialize painter-info)))
+       (serialize info)))
     (place-channel-put worker message))
   s)
 

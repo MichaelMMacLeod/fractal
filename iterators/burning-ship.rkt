@@ -7,28 +7,25 @@
                     [unsafe-fl- fl-]
                     [unsafe-fl* fl*]
                     [unsafe-flsqrt flsqrt]
-                    [unsafe-fl>= fl>=])
+                    [unsafe-fl>= fl>=]
+                    [unsafe-flabs flabs])
          racket/match)
 
 (provide (contract-out [build-iterator iterator-builder?]))
 
 (define/match (build-iterator info)
-  [((hash-table ('c-real c-real)
-                ('c-imaginary c-imaginary)
-                ('max-iterations max-iterations)))
+  [((hash-table ('max-iterations max-iterations)))
    (lambda (a bi)
      (let loop ([z-real a]
                 [z-imaginary bi]
                 [iterations 0])
        (define z-real-square (fl* z-real z-real))
        (define z-imaginary-square (fl* z-imaginary z-imaginary))
-       (cond [(or (fl>= (fl+ z-real-square z-imaginary-square) 4.0)
+       (cond [(or (fl>= (fl+ z-real-square z-imaginary) 4.0)
                   (>= iterations max-iterations))
               iterations]
-             [else (loop (fl+ (fl- z-real-square
-                                   z-imaginary-square)
-                              c-real)
-                         (fl+ (fl* 2.0
-                                   (fl* z-real z-imaginary))
-                              c-imaginary)
+             [else (loop (flabs (fl+ (fl- z-real-square z-imaginary-square)
+                                     a))
+                         (fl+ (flabs (fl* 2.0 z-real z-imaginary))
+                              bi)
                          (add1 iterations))])))])

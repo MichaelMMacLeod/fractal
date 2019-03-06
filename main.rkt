@@ -58,11 +58,12 @@
                       (string->symbol key)
                       (read (open-input-string value))))))
 
-(cond [(equal? (the-iterator-path) "mandelbrot")
-       (the-iterator-path "./iterators/mandelbrot.rkt")]
-      [(equal? (the-iterator-path) "julia")
-       (the-iterator-path "./iterators/julia.rkt")]
-      [else (void)])
+(the-iterator-path
+  (case (the-iterator-path)
+    [("mandelbrot") "./iterators/mandelbrot.rkt"]
+    [("julia") "./iterators/julia.rkt"]
+    [("burning-ship") "./iterators/burning-ship.rkt"]
+    [else (the-iterator-path)]))
 
 (cond [(equal? (the-painter-path) "grayscale")
        (the-painter-path "./painters/grayscale.rkt")]

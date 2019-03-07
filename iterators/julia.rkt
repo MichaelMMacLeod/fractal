@@ -1,20 +1,20 @@
-#lang racket/base
+#lang assembly-line
 
-(require "iterator.rkt"
-         racket/contract/base
-         (rename-in racket/unsafe/ops
-                    [unsafe-fl+ fl+]
-                    [unsafe-fl- fl-]
-                    [unsafe-fl* fl*]
-                    [unsafe-flsqrt flsqrt]
-                    [unsafe-fl>= fl>=])
-         racket/match)
+(require racket/require
+         (for-syntax racket)
+         (filtered-in
+          (lambda (name)
+            (and (regexp-match? #rx"^unsafe-fl" name)
+                 (regexp-replace #rx"^unsafe-" name "")))
+          racket/unsafe/ops))
 
-(provide
- (contract-out
-  [rename julia build-iterator iterator-builder?]))
-
-(define-iterator (julia a bi max-iterations c-real c-imaginary)
+(define-worker
+  (julia [a flonum?]
+         [bi flonum?]
+         [max-iterations exact-nonnegative-integer?]
+         [c-real flonum?]
+         [c-imaginary flonum?])
+  exact-nonnegative-integer?
   (let loop ([z-real a]
              [z-imaginary bi]
              [iterations 0])

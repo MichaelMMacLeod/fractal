@@ -1,20 +1,17 @@
-#lang racket/base
+#lang assembly-line
 
-(require "iterator.rkt"
-         racket/contract/base
-         (rename-in racket/unsafe/ops
-                    [unsafe-fl+ fl+]
-                    [unsafe-fl- fl-]
-                    [unsafe-fl* fl*]
-                    [unsafe-flsqrt flsqrt]
-                    [unsafe-fl>= fl>=])
-         racket/match)
+(require racket/require
+         (for-syntax racket)
+         (filtered-in
+          (lambda (name)
+            (and (regexp-match? #rx"^unsafe-fl" name)
+                 (regexp-replace #rx"^unsafe-" name "")))
+          racket/unsafe/ops))
 
-(provide
- (contract-out
-  [rename mandelbrot build-iterator iterator-builder?]))
-
-(define-iterator (mandelbrot a bi max-iterations)
+(define-worker (mandelbrot [a flonum?]
+                           [bi flonum?]
+                           [max-iterations exact-nonnegative-integer?])
+  exact-nonnegative-integer?
   (let loop ([z-real 0.0]
              [z-imaginary 0.0]
              [iterations 0])

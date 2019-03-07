@@ -1,21 +1,17 @@
-#lang racket/base
+#lang assembly-line
 
-(require "iterator.rkt"
-         racket/contract/base
-         (rename-in racket/unsafe/ops
-                    [unsafe-fl+ fl+]
-                    [unsafe-fl- fl-]
-                    [unsafe-fl* fl*]
-                    [unsafe-flsqrt flsqrt]
-                    [unsafe-fl>= fl>=]
-                    [unsafe-flabs flabs])
-         racket/match)
+(require racket/require
+         (for-syntax racket)
+         (filtered-in
+          (lambda (name)
+            (and (regexp-match? #rx"^unsafe-fl" name)
+                 (regexp-replace #rx"^unsafe-" name "")))
+          racket/unsafe/ops))
 
-(provide
- (contract-out
-  [rename burning-ship build-iterator iterator-builder?]))
-
-(define-iterator (burning-ship a bi max-iterations)
+(define-iterator (burning-ship [a flonum?]
+                               [bi flonum?]
+                               [max-iterations exact-nonnegative-integer?])
+  exact-nonnegative-integer?
   (let loop ([z-real a]
              [z-imaginary bi]
              [iterations 0])

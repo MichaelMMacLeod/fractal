@@ -7,7 +7,8 @@
          racket/flonum
          racket/match
          racket/place
-         racket/serialize)
+         racket/serialize
+         assembly-line)
 
 (provide
  (contract-out

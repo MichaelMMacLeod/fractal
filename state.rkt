@@ -21,8 +21,7 @@
      [cache-length exact-nonnegative-integer?]
      [bitmap (is-a?/c bitmap%)]
      [workers (listof place?)]
-     [info (hash/c symbol? any/c)])
-    #:omit-constructor)
+     [info (hash/c symbol? any/c)]))
   [make-state
    (->* (exact-nonnegative-integer?
          exact-nonnegative-integer?

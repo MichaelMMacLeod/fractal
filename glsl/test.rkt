@@ -131,18 +131,6 @@ END
              (send this refresh)]
             [(eq? #\o code)
              (set! zoom (fl* zoom 1.15))
-             (send this refresh)]
-            [(eq? #\a code)
-             (set! real (fl- real (fl* zoom 0.01)))
-             (send this refresh)]
-            [(eq? #\d code)
-             (set! real (fl+ real (fl* zoom 0.01)))
-             (send this refresh)]
-            [(eq? #\w code)
-             (set! imag (fl+ imag (fl* zoom 0.01)))
-             (send this refresh)]
-            [(eq? #\s code)
-             (set! imag (fl- imag (fl* zoom 0.01)))
              (send this refresh)]))
  
     (define/override (on-paint)

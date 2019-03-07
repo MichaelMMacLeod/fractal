@@ -44,8 +44,8 @@ varying float ypos;
 
 void main(void)
 {
-  xpos = real + zoom * gl_Vertex.x * w / 2;
-  ypos = imag + zoom * gl_Vertex.y * h / 2;
+  xpos = real + zoom * (gl_Vertex.x * w - w / 2);
+  ypos = imag + zoom * (gl_Vertex.y * h - h / 2);
 
   gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
 }
@@ -73,7 +73,7 @@ END
 
   (glSetUniformLocations prg
     (real 1f r)
-    (imag 1f i)
+    (imag 1f (fl- i))
     (zoom 1f z)
     (w 1f w)
     (h 1f h))

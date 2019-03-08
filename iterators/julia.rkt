@@ -12,7 +12,7 @@
 
 (provide
  (contract-out
-  [rename julia build-iterator iterator-builder?]))
+  [rename julia iterator iterator?]))
 
 (define-iterator (julia a bi max-iterations c-real c-imaginary)
   (let loop ([z-real a]

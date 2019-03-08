@@ -37,8 +37,8 @@
   (for/list ([worker-number (in-range count)])
     (place/context
      channel
-     (define build-iterator (dynamic-require iterator-path 'build-iterator))
-     (define build-painter (dynamic-require painter-path 'build-painter))
+     (define iterator (dynamic-require iterator-path 'iterator))
+     (define painter (dynamic-require painter-path 'painter))
      (let loop ([worker-thread #f])
        (match (place-channel-get channel)
          [(worker-message
@@ -59,5 +59,6 @@
                    center-real center-imaginary
                    width height
                    zoom
-                   (build-iterator deserialized-info)
-                   (build-painter deserialized-info)))))])))))
+                   iterator
+                   painter
+                   deserialized-info))))])))))

@@ -21,6 +21,7 @@
        flonum?
        iterator?
        painter?
+       (hash/c symbol? any/c)
        void?)]))
 
 (define-inline (row-major-index->point index width)
@@ -57,7 +58,8 @@
          width height
          zoom
          iterator
-         painter)
+         painter
+         info)
   (for ([index (in-range (quotient start-index 4)
                          (quotient end-index 4))])
     (define-values (x y)
@@ -68,5 +70,8 @@
        center-real center-imaginary
        width height
        zoom))
-    (define color (painter (iterator a bi)))
+    (define iterator-info (hash-set* info 'a a 'bi bi))
+    (define iterations (iterator iterator-info))
+    (define painter-info (hash-set* iterator-info 'iterations iterations))
+    (define color (painter painter-info))
     (insert-argb-color! bytestring index color)))

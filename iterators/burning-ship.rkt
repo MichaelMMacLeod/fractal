@@ -13,7 +13,7 @@
 
 (provide
  (contract-out
-  [rename burning-ship build-iterator iterator-builder?]))
+  [rename burning-ship iterator iterator?]))
 
 (define-iterator (burning-ship a bi max-iterations)
   (let loop ([z-real a]

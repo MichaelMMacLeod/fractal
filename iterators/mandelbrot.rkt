@@ -12,7 +12,7 @@
 
 (provide
  (contract-out
-  [rename mandelbrot build-iterator iterator-builder?]))
+  [rename mandelbrot iterator iterator?]))
 
 (define-iterator (mandelbrot a bi max-iterations)
   (let loop ([z-real 0.0]

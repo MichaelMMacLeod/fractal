@@ -1,21 +1,17 @@
 #lang racket/base
 
 (require "iterator.rkt"
-         racket/contract/base
          (rename-in racket/unsafe/ops
                     [unsafe-fl+ fl+]
                     [unsafe-fl- fl-]
                     [unsafe-fl* fl*]
                     [unsafe-flsqrt flsqrt]
                     [unsafe-fl>= fl>=]
-                    [unsafe-flabs flabs])
-         racket/match)
+                    [unsafe-flabs flabs]))
 
-(provide
- (contract-out
-  [rename burning-ship iterator iterator?]))
-
-(define-iterator (burning-ship a bi max-iterations)
+(define-iterator (burning-ship [a flonum?]
+                               [bi flonum?]
+                               [max-iterations exact-nonnegative-integer?])
   (let loop ([z-real a]
              [z-imaginary bi]
              [iterations 0])

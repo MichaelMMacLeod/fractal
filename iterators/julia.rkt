@@ -1,20 +1,18 @@
 #lang racket/base
 
 (require "iterator.rkt"
-         racket/contract/base
          (rename-in racket/unsafe/ops
                     [unsafe-fl+ fl+]
                     [unsafe-fl- fl-]
                     [unsafe-fl* fl*]
                     [unsafe-flsqrt flsqrt]
-                    [unsafe-fl>= fl>=])
-         racket/match)
+                    [unsafe-fl>= fl>=]))
 
-(provide
- (contract-out
-  [rename julia iterator iterator?]))
-
-(define-iterator (julia a bi max-iterations c-real c-imaginary)
+(define-iterator (julia [a flonum?]
+                        [bi flonum?]
+                        [c-real flonum?]
+                        [c-imaginary flonum?]
+                        [max-iterations exact-nonnegative-integer?])
   (let loop ([z-real a]
              [z-imaginary bi]
              [iterations 0])

@@ -1,11 +1,8 @@
 #lang racket/base
 
-(require "painter.rkt" racket/contract/base)
+(require "painter.rkt")
 
-(provide (contract-out [painter painter?]))
-
-(define (painter info)
-  (define iterations (hash-ref info 'iterations))
+(define-painter (grayscale [iterations exact-nonnegative-integer?])
   (define v (cond [(> iterations 255)
                    (- 255 (modulo iterations 255))]
                   [else iterations]))

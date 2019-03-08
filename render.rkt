@@ -71,5 +71,5 @@
        width height
        zoom))
     (define iterator-info (hash-set* info 'a a 'bi bi))
-    (define color (painter (iterator iterator-info)))
+    (define color (hash-ref (painter (iterator iterator-info)) 'color))
     (insert-argb-color! bytestring index color)))

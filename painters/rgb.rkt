@@ -1,14 +1,11 @@
 #lang racket/base
 
-(require "painter.rkt" racket/contract/base)
+(require "painter.rkt")
 
-(provide (contract-out [painter painter?]))
-
-(define (painter info)
-  (define iterations (hash-ref info 'iterations))
-  (define red (hash-ref info 'red))
-  (define blue (hash-ref info 'blue))
-  (define green (hash-ref info 'green))
+(define-painter (rgb [iterations exact-nonnegative-integer?]
+                     [red exact-nonnegative-integer?]
+                     [blue exact-nonnegative-integer?]
+                     [green exact-nonnegative-integer?])
   (argb-color 255
               (modulo (+ red iterations) 255)
               (modulo (+ blue iterations) 255)

@@ -4,7 +4,10 @@
          racket/class
          racket/cmdline
          racket/flonum
+         racket/format
          racket/future
+         racket/list
+         racket/sequence
          racket/gui/base)
 
 (define the-iterator-path (make-parameter "mandelbrot"))
@@ -51,12 +54,20 @@
  [("-d" "--draw-rate") draw-rate
   ""
   (the-draw-rate (read (open-input-string draw-rate)))]
- #:multi
- (["-i" "--info"] key value
-  ""
-  (the-info (hash-set (the-info)
-                      (string->symbol key)
-                      (read (open-input-string value))))))
+ #:args extra-info
+ (cond [(zero? (length extra-info)) (void)]
+       [(even? (length extra-info))
+        (the-info
+         (for/fold ([h (the-info)])
+                   ([key-value (in-slice 2 extra-info)])
+           (hash-set h
+                     (string->symbol (first key-value))
+                     (read (open-input-string (second key-value))))))]
+       [else (displayln (~a "Expected an even number of info items, but was given "
+                            (length extra-info)
+                            " in "
+                            (~a extra-info)))
+             (exit 1)]))
 
 (the-iterator-path
   (case (the-iterator-path)

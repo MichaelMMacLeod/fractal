@@ -34,7 +34,7 @@
       (thread (lambda ()
                 (for ([forever (in-naturals)])
                   (send state redraw-bitmap)
-                  (send this on-paint)
+                  (send this refresh)
                   (sleep draw-rate)))))
 
     (define/public (set-draw-rate new-draw-rate)

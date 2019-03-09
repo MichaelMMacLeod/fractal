@@ -32,7 +32,7 @@
      worker-count
      draw-rate)
 
-    (define s
+    (define state
       (make-state (send this get-width)
                   (send this get-height)
                   iterator-path
@@ -43,17 +43,6 @@
                   #:zoom zoom
                   #:worker-count worker-count))
 
-    (define/public (get-info key)
-      (hash-ref (state-info s) key))
-
-    (define/public (set-info! key value)
-      (define new-info
-        (hash-set (state-info s) key value))
-      (set! s
-            (struct-copy state s
-                         [info new-info]))
-      (send this on-paint))
-
     (define draw-thread (create-draw-thread))
 
     (define/public (get-draw-thread) draw-thread)
@@ -61,7 +50,7 @@
     (define/public (create-draw-thread)
       (thread (lambda ()
                 (for ([forever (in-naturals)])
-                  (redraw-bitmap!/state s)
+                  (redraw-bitmap!/state state)
                   (send this on-paint)
                   (sleep draw-rate)))))
 
@@ -72,22 +61,22 @@
       (cond [(send event button-down? 'left)
              (define x (send event get-x))
              (define y (send event get-y))
-             (set! s (move-center/state s x y))
-             (redraw-cache!/state s)]
+             (set! state (move-center/state state x y))
+             (redraw-cache!/state state)]
             [else (void)]))
 
     (define/override (on-char event)
       (cond [(eq? #\i (send event get-key-code))
-             (set! s (zoom/state s 0.9))
-             (redraw-cache!/state s)]
+             (set! state (zoom/state state 0.9))
+             (redraw-cache!/state state)]
             [(eq? #\o (send event get-key-code))
-             (set! s (zoom/state s 1.1))
-             (redraw-cache!/state s)]))
+             (set! state (zoom/state state 1.1))
+             (redraw-cache!/state state)]))
 
     (define/override (on-paint)
       (define dc (send this get-dc))
-      (send dc draw-bitmap (state-bitmap s) 0 0))
+      (send dc draw-bitmap (state-bitmap state) 0 0))
 
     (define/override (on-size new-width new-height)
-      (set! s (resize/state s new-width new-height))
-      (redraw-cache!/state s))))
+      (set! state (resize/state state new-width new-height))
+      (redraw-cache!/state state))))

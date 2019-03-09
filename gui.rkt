@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "state.rkt"
+(require "object-state.rkt"
          racket/class
          racket/contract/base
          racket/gui/base)
@@ -22,26 +22,8 @@
   (class canvas%
     (super-new)
 
-    (init-field
-     iterator-path
-     painter-path
-     info
-     center-real
-     center-imaginary
-     zoom
-     worker-count
-     draw-rate)
-
-    (define state
-      (make-state (send this get-width)
-                  (send this get-height)
-                  iterator-path
-                  painter-path
-                  info
-                  #:center-real center-real
-                  #:center-imaginary center-imaginary
-                  #:zoom zoom
-                  #:worker-count worker-count))
+    (init-field state
+                [draw-rate 0.01])
 
     (define draw-thread (create-draw-thread))
 
@@ -50,7 +32,7 @@
     (define/public (create-draw-thread)
       (thread (lambda ()
                 (for ([forever (in-naturals)])
-                  (redraw-bitmap!/state state)
+                  (send state redraw-bitmap)
                   (send this on-paint)
                   (sleep draw-rate)))))
 
@@ -61,22 +43,22 @@
       (cond [(send event button-down? 'left)
              (define x (send event get-x))
              (define y (send event get-y))
-             (set! state (move-center/state state x y))
-             (redraw-cache!/state state)]
+             (send state move-center x y)
+             (send state redraw-cache)]
             [else (void)]))
 
     (define/override (on-char event)
       (cond [(eq? #\i (send event get-key-code))
-             (set! state (zoom/state state 0.9))
-             (redraw-cache!/state state)]
+             (send state zoom-in)
+             (send state redraw-cache)]
             [(eq? #\o (send event get-key-code))
-             (set! state (zoom/state state 1.1))
-             (redraw-cache!/state state)]))
+             (send state zoom-out)
+             (send state redraw-cache)]))
 
     (define/override (on-paint)
       (define dc (send this get-dc))
-      (send dc draw-bitmap (state-bitmap state) 0 0))
+      (send dc draw-bitmap (send state get-bitmap) 0 0))
 
     (define/override (on-size new-width new-height)
-      (set! state (resize/state state new-width new-height))
-      (redraw-cache!/state state))))
+      (send state resize new-width new-height)
+      (send state redraw-cache))))

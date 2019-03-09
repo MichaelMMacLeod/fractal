@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require "gui.rkt"
+         "object-state.rkt"
          racket/class
          racket/cmdline
          racket/flonum
@@ -89,17 +90,16 @@
        [width (the-width)]
        [height (the-height)]))
 
-(define fractal-canvas
-  (new fractal-canvas%
-       [parent frame]
+(define state
+  (new fractal-state%
+       [width 600]
+       [height 600]
        [iterator-path (the-iterator-path)]
        [painter-path (the-painter-path)]
-       [info (the-info)]
-       [center-real (the-center-real)]
-       [center-imaginary (the-center-imaginary)]
-       [zoom (the-zoom)]
-       [worker-count (the-worker-count)]
-       [draw-rate (the-draw-rate)]))
+       [info (the-info)]))
+
+(define fractal-canvas
+  (new fractal-canvas% [parent frame] [state state]))
 
 (send fractal-canvas focus)
 

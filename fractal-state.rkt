@@ -1,3 +1,4 @@
+
 #lang racket/base
 
 (require "workers.rkt"
@@ -49,6 +50,11 @@
     [get-zoom-factor (->m flonum?)]
     [get-default-cache-value (->m byte?)]
     [set-default-cache-value (->m byte? void?)]
+    [save-bitmap (->*m ((or/c path-string? output-port?)
+                        (or/c 'png 'jpeg 'xbm 'xpm 'bmp))
+                       ((integer-in 0 100)
+                        #:unscaled? any/c)
+                       boolean?)]
     )]))
 
 (define fractal-state%
@@ -161,5 +167,8 @@
       (set! height new-height)
       (generate-new-cache)
       (generate-new-bitmap))
+
+    (define/public (save-bitmap name kind [quality 75] #:unscaled? [unscaled? #f])
+      (send bitmap save-file name kind quality #:unscaled? unscaled?))
 
     ))

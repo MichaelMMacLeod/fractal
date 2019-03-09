@@ -3,6 +3,7 @@
 (require "fractal-state.rkt"
          racket/class
          racket/contract/base
+         racket/format
          racket/gui/base)
 
 (provide
@@ -53,7 +54,12 @@
              (send state redraw-cache)]
             [(eq? #\o (send event get-key-code))
              (send state zoom-out)
-             (send state redraw-cache)]))
+             (send state redraw-cache)]
+            [(eq? #\s (send event get-key-code))
+             (send state
+                   save-bitmap
+                   (~a "fractal-" (current-milliseconds))
+                   'png)]))
 
     (define/override (on-paint)
       (define dc (send this get-dc))

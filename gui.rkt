@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "object-state.rkt"
+(require "fractal-state.rkt"
          racket/class
          racket/contract/base
          racket/gui/base)

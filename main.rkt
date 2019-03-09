@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require "gui.rkt"
-         "object-state.rkt"
+         "fractal-state.rkt"
          racket/class
          racket/cmdline
          racket/flonum

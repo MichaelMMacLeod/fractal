@@ -21,7 +21,9 @@
      [cache-length exact-nonnegative-integer?]
      [bitmap (is-a?/c bitmap%)]
      [workers (listof place?)]
-     [info (hash/c symbol? any/c)])
+     [info (hash/c symbol? any/c)]
+     [iterator-path module-path?]
+     [painter-path module-path?])
     #:omit-constructor)
   [make-state
    (->* (exact-nonnegative-integer?
@@ -48,7 +50,9 @@
    (-> state?
        exact-nonnegative-integer?
        exact-nonnegative-integer?
-       state?)]))
+       state?)]
+  [change-iterator/state (-> state? module-path? state?)]
+  [change-painter/state (-> state? module-path? state?)]))
 
 (struct state
   (center-real
@@ -60,7 +64,9 @@
    cache-length
    bitmap
    workers
-   info)
+   info
+   iterator-path
+   painter-path)
   #:constructor-name -state)
 
 (define (make-state
@@ -84,7 +90,9 @@
    cache-length
    (make-object bitmap% width height)
    (create-workers iterator-path painter-path worker-count)
-   info))
+   info
+   iterator-path
+   painter-path))
 
 (define (move-center/state s screen-x screen-y)
   (match-define
@@ -131,7 +139,9 @@
               [workers workers]
               [cache cache]
               [cache-length cache-length]
-              [info info]))
+              [info info]
+              [iterator-path iterator-path]
+              [painter-path painter-path]))
     s)
   (define work-length (quotient cache-length (length workers)))
   (for ([worker (in-list workers)]
@@ -150,7 +160,9 @@
        ;; and hash maps. For more information, see these issues:
        ;;  - https://github.com/racket/racket/issues/2504
        ;;  - (possibly related) https://github.com/racket/racket/issues/2298
-       (serialize info)))
+       (serialize info)
+       iterator-path
+       painter-path))
     (place-channel-put worker message))
   s)
 
@@ -183,3 +195,9 @@
   (generate-new-bitmap/state
    (generate-new-cache/state
     (struct-copy state s [width new-width] [height new-height]))))
+
+(define (change-iterator/state s new-iterator-path)
+  (struct-copy state s [iterator-path new-iterator-path]))
+
+(define (change-painter/state s new-painter-path)
+  (struct-copy state s [painter-path new-painter-path]))

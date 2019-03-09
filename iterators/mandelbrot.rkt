@@ -1,20 +1,16 @@
 #lang racket/base
 
 (require "iterator.rkt"
-         racket/contract/base
          (rename-in racket/unsafe/ops
                     [unsafe-fl+ fl+]
                     [unsafe-fl- fl-]
                     [unsafe-fl* fl*]
                     [unsafe-flsqrt flsqrt]
-                    [unsafe-fl>= fl>=])
-         racket/match)
+                    [unsafe-fl>= fl>=]))
 
-(provide
- (contract-out
-  [rename mandelbrot build-iterator iterator-builder?]))
-
-(define-iterator (mandelbrot a bi max-iterations)
+(define-iterator (mandelbrot [a flonum?]
+                             [bi flonum?]
+                             [max-iterations exact-nonnegative-integer?])
   (let loop ([z-real 0.0]
              [z-imaginary 0.0]
              [iterations 0])

@@ -1,4 +1,3 @@
-
 #lang racket/base
 
 (require "workers.rkt"
@@ -47,7 +46,9 @@
     [get-center-real (->m flonum?)]
     [get-center-imaginary (->m flonum?)]
     [get-zoom (->m flonum?)]
+    [set-zoom (->m flonum? void?)]
     [get-zoom-factor (->m flonum?)]
+    [set-zoom-factor (->m flonum? void?)]
     [get-default-cache-value (->m byte?)]
     [set-default-cache-value (->m byte? void?)]
     [save-bitmap (->*m ((or/c path-string? output-port?)
@@ -74,8 +75,11 @@
                 [default-cache-value 50])
 
     (define cache-length (* 4 width height))
+
     (define cache (make-shared-bytes cache-length default-cache-value))
+
     (define bitmap (make-object bitmap% width height))
+
     (define workers (create-workers iterator-path painter-path worker-count))
 
     (define/public (get-bitmap) bitmap)
@@ -103,7 +107,13 @@
 
     (define/public (get-zoom) zoom)
 
+    (define/public (set-zoom new-zoom)
+      (set! zoom new-zoom))
+
     (define/public (get-zoom-factor) zoom-factor)
+
+    (define/public (set-zoom-factor new-zoom-factor)
+      (set! zoom-factor new-zoom-factor))
 
     (define/public (get-default-cache-value) default-cache-value)
 

@@ -11,7 +11,7 @@
          racket/gui/base)
 
 (define the-iterator-path (make-parameter "mandelbrot"))
-(define the-painter-path (make-parameter "grayscale"))
+(define the-painter-path (make-parameter "rainbow"))
 (define the-info (make-parameter (hash 'max-iterations 500)))
 (define the-width (make-parameter 600))
 (define the-height (make-parameter 600))
@@ -76,11 +76,12 @@
     [("burning-ship") "./iterators/burning-ship.rkt"]
     [else (the-iterator-path)]))
 
-(cond [(equal? (the-painter-path) "grayscale")
-       (the-painter-path "./painters/grayscale.rkt")]
-      [(equal? (the-painter-path) "rgb")
-       (the-painter-path "./painters/rgb.rkt")]
-      [else (void)])
+(the-painter-path
+  (case (the-painter-path)
+    [("rainbow") "./painters/rainbow.rkt"]
+    [("grayscale") "./painters/grayscale.rkt"]
+    [("rgb") "./painters/rgb.rkt"]
+    [else (the-painter-path)]))
 
 (define frame
   (new frame%

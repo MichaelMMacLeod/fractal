@@ -132,10 +132,61 @@
        [width (the-width)]
        [height (the-height)]))
 
+(define horizontal-panel
+  (new horizontal-panel%
+       [parent frame]))
+
 (define fractal-canvas
   (new fractal-canvas%
-       [parent frame]
+       [parent horizontal-panel]
        [state state]))
+
+(define vertical-panel
+  (new vertical-panel%
+       [parent horizontal-panel]
+       [stretchable-width #f]))
+
+(define max-iterations-text-field
+  (new text-field%
+       [parent vertical-panel]
+       [label "max-iterations"]
+       [init-value
+        (number->string (hash-ref (send state get-info) 'max-iterations))]
+       [callback
+        (lambda (t c)
+          (cond
+            [(eq? 'text-field-enter
+                  (send c get-event-type))
+             (define value
+               (with-handlers ([exn:fail:contract?
+                                (lambda (e) #f)])
+                 (string->number (send t get-value))))
+             (cond [(exact-nonnegative-integer? value)
+                    (send state set-info
+                          (hash-set (send state get-info)
+                                    'max-iterations
+                                    value))
+                    (send state redraw-cache)]
+                   [else (void)])]
+            [else (void)]))]))
+
+(define iterator-path-button
+  (new button%
+       [parent vertical-panel]
+       [label "Select Iterator"]
+       [callback
+        (lambda (b c)
+          (send state set-iterator-path (get-file))
+          (send state redraw-cache))]))
+
+(define painter-path-button
+  (new button%
+       [parent vertical-panel]
+       [label "Select Painter"]
+       [callback
+        (lambda (b c)
+          (send state set-painter-path (get-file))
+          (send state redraw-cache))]))
 
 (send frame show #t)
 (send fractal-canvas focus)

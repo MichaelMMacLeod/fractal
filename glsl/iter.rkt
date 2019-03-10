@@ -148,18 +148,7 @@
              #:with (color ...) #'(body.color ...)
              #:with ((colors ...) ...) #'((body.colors ...) ...)
              #:with (else ...) #'(body.else ...)
-             #:with iterate #'body.iterate
-             )))
-
-#;((ARG (iterator.arg ...))
-   (ARG.TYPE (iterator.arg.type ...))
-   (VAR (iterator.var ...))
-   (VAR.TYPE (iterator.var.type ...))
-   (VAR.BINDING (iterator.var.binding ...))
-   (TEST (iterator.test ...))
-   (THEN (iterator.then ...)) ...
-   (COLOR (iterator.color ...))
-   (ELSE iterator.else))
+             #:with iterate #'body.iterate)))
 
 (define-syntax (define-iterator stx)
   (syntax-parse stx
@@ -167,7 +156,7 @@
      (with-syntax* ([module-body
                      #'(iterator:racket
                         typed/racket
-                        (provide (rename-out [i.name iterator]))
+                        (provide (struct-out color) (rename-out [i.name iterator]))
                         (struct color ([red : Integer]
                                        [green : Integer]
                                        [blue : Integer]

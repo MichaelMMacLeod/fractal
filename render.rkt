@@ -2,6 +2,7 @@
 
 (require "iterators/iterator.rkt"
          "painters/painter.rkt"
+         (submod "glsl/iter.rkt" iterator:racket)
          racket/contract/base
          racket/flonum
          racket/match
@@ -46,10 +47,10 @@
 
 (define-inline (insert-argb-color! bytestring index color)
   (define pos (* index 4))
-  (bytes-set! bytestring pos (argb-color-a color))
-  (bytes-set! bytestring (+ pos 1) (argb-color-r color))
-  (bytes-set! bytestring (+ pos 2) (argb-color-g color))
-  (bytes-set! bytestring (+ pos 3) (argb-color-b color)))
+  (bytes-set! bytestring pos (color-alpha color))
+  (bytes-set! bytestring (+ pos 1) (color-red color))
+  (bytes-set! bytestring (+ pos 2) (color-green color))
+  (bytes-set! bytestring (+ pos 3) (color-blue color)))
 
 (define (render-part!
          bytestring
@@ -57,7 +58,7 @@
          center-real center-imaginary
          width height
          zoom
-         iterator
+         old-iterator
          painter
          info)
   (for ([index (in-range (quotient start-index 4)
@@ -70,6 +71,7 @@
        center-real center-imaginary
        width height
        zoom))
-    (define iterator-info (hash-set* info 'a a 'bi bi))
-    (define color (hash-ref (painter (iterator iterator-info)) 'color))
+    ;(define iterator-info (hash-set* info 'a a 'bi bi))
+    ;(define color (hash-ref (painter (iterator iterator-info)) 'color))
+    (define color (iterator a bi))
     (insert-argb-color! bytestring index color)))

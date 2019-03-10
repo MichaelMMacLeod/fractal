@@ -1,6 +1,10 @@
 #lang racket
 
-(require syntax/parse (for-syntax syntax/parse syntax/to-string))
+(require syntax/parse
+         (for-syntax racket/syntax
+                     syntax/parse
+                     syntax/to-string
+                     syntax/strip-context))
 
 (begin-for-syntax
   (define-syntax-class type
@@ -44,8 +48,8 @@
 
   (define-syntax-class typed-variable-definition
     #:description "typed variable definition"
-    #:datum-literals (define)
-    (pattern (define var:typed-variable value:arithmetic-expression)))
+    #:datum-literals (define :)
+    (pattern (define var:id : type:type value:arithmetic-expression)))
 
   (define-syntax-class conditional-expression
     #:description "conditional expression"
@@ -85,7 +89,11 @@
               then-body:typed-variable-definition ...
               then-color:color-expression]
              #:with (then ...) #'(then-body ...)
-             #:with color #'then-color))
+             #:with color #'then-color
+             #:with (colors ...) #'(then-color.red
+                              then-color.blue
+                              then-color.green
+                              then-color.alpha)))
 
   (define-syntax-class loop-iterate-clause
     #:description "loop iterate clause"
@@ -99,7 +107,7 @@
               else-body:typed-variable-definition ...
               loop-iterate-clause:loop-iterate-clause]
              #:with body #'(else-body ...)
-             #:with loop #'loop-iterate-clause))
+             #:with iterate #'loop-iterate-clause))
 
   (define-syntax-class cond-form
     #:description "cond clause"
@@ -108,7 +116,9 @@
              #:with (test ...) #'(test-clause.test ...)
              #:with ((then ...) ...) #'((test-clause.then ...) ...)
              #:with (color ...) #'(test-clause.color ...)
-             #:with else #'else-clause.body))
+             #:with ((colors ...) ...) #'((test-clause.colors ...) ...)
+             #:with (else ...) #'else-clause.body
+             #:with iterate #'else-clause.iterate))
 
   (define-syntax-class loop-form
     #:description "loop form"
@@ -120,7 +130,9 @@
              #:with (test ...) #'(body.test ...)
              #:with ((then ...) ...) #'((body.then ...) ...)
              #:with (color ...) #'(body.color ...)
-             #:with else #'body.else))
+             #:with ((colors ...) ...) #'((body.colors ...) ...)
+             #:with (else ...) #'(body.else ...)
+             #:with iterate #'body.iterate))
 
   (define-syntax-class iterator-definition
     #:description "iterator definition"
@@ -134,20 +146,46 @@
              #:with (test ...) #'(body.test ...)
              #:with ((then ...) ...) #'((body.then ...) ...)
              #:with (color ...) #'(body.color ...)
-             #:with else #'body.else
+             #:with ((colors ...) ...) #'((body.colors ...) ...)
+             #:with (else ...) #'(body.else ...)
+             #:with iterate #'body.iterate
              )))
+
+#;((ARG (iterator.arg ...))
+   (ARG.TYPE (iterator.arg.type ...))
+   (VAR (iterator.var ...))
+   (VAR.TYPE (iterator.var.type ...))
+   (VAR.BINDING (iterator.var.binding ...))
+   (TEST (iterator.test ...))
+   (THEN (iterator.then ...)) ...
+   (COLOR (iterator.color ...))
+   (ELSE iterator.else))
 
 (define-syntax (define-iterator stx)
   (syntax-parse stx
-    [iterator:iterator-definition #''((ARG (iterator.arg ...))
-                                      (ARG.TYPE (iterator.arg.type ...))
-                                      (VAR (iterator.var ...))
-                                      (VAR.TYPE (iterator.var.type ...))
-                                      (VAR.BINDING (iterator.var.binding ...))
-                                      (TEST (iterator.test ...))
-                                      (THEN (iterator.then ...)) ...
-                                      (COLOR (iterator.color ...))
-                                      (ELSE iterator.else))]))
+    [i:iterator-definition
+     (with-syntax* ([module-body
+                     #'(iterator:racket
+                        typed/racket
+                        (provide (rename-out [i.name iterator]))
+                        (struct color ([red : Integer]
+                                       [green : Integer]
+                                       [blue : Integer]
+                                       [alpha : Integer])
+                          #:prefab)
+                        (define (i.name [i.arg : i.arg.type] ...) : color
+                          (let loop : color ([i.var : i.var.type i.var.binding] ...)
+                               (cond [i.test
+                                      i.then ...
+                                      (color
+                                       (floor
+                                        (inexact->exact (* 255.0 i.colors))) ...)]
+                                     ...
+                                     [else i.else ...
+                                           i.iterate]))))]
+                    [stripped-context
+                     #`#,(syntax-local-introduce (strip-context #'module-body))])
+       #'(begin (module . stripped-context)))]))
 
 (define-iterator (mandelbrot [xpos : Float] [ypos : Float])
   (let loop ([z_real : Float 0.0]
@@ -156,15 +194,15 @@
              [sq : Float 0.0])
     (cond [(or (> iterations 1.0)
                (> sq 4.0))
-           (define [red : Float] iterations)
-           (define [green : Float] iterations)
-           (define [blue : Float] iterations)
-           (define [alpha : Float] 1.0)
+           (define red : Float iterations)
+           (define green : Float iterations)
+           (define blue : Float iterations)
+           (define alpha : Float 1.0)
            (color red green blue alpha)]
           [else
-           (define [z_real_square : Float]
+           (define z_real_square : Float
              (* z_real z_real))
-           (define [z_imaginary_square : Float]
+           (define z_imaginary_square : Float
              (* z_imaginary z_imaginary))
            (loop (+ xpos (- z_real_square z_imaginary_square))
                  (+ (* 2.0 z_real z_imaginary) ypos)

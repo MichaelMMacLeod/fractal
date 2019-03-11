@@ -2,7 +2,7 @@
 
 (require "iterators/iterator.rkt"
          "painters/painter.rkt"
-         (submod "glsl/iter.rkt" iterator:racket)
+         (submod "glsl/mandelbrot.rkt" iterator:racket)
          racket/contract/base
          racket/flonum
          racket/match

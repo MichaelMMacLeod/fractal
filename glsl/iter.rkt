@@ -113,10 +113,17 @@
     (for/list ([s (in-list strings)])
       (string-append (make-string (* spaces n) #\Space) s)))
 
+  (define (type->glsl-type type)
+    (match type
+      ['Float 'float]
+      ['Integer 'int]))
+
   (define (compile-varying-defs types args)
     (for/list ([type (in-list (syntax->list types))]
                [arg (in-list (syntax->list args))])
-      (format "varying ~a ~a;" (syntax-e type) (syntax-e arg))))
+      (format "varying ~a ~a;"
+              (type->glsl-type (syntax-e type))
+              (syntax-e arg))))
 
   (define (compile-arithmetic-expression c)
     (match c
@@ -145,7 +152,7 @@
                [type (in-list (syntax->list pre-loop-var-types))]
                [binding (in-list (syntax->list pre-loop-var-bindings))])
       (format "~a ~a = ~a;"
-              (syntax-e type)
+              (type->glsl-type (syntax-e type))
               (syntax-e var)
               (compile-arithmetic-expression (syntax->datum binding)))))
 
@@ -186,11 +193,14 @@
                                  (compile-conditional-expression b))]
       [x (~a x)]))
 
-  (define (compile-loop-condition end-loops)
+  (define (compile-loop-condition end-loop)
     (format
      "while (!(~a)) {"
-     (for/fold ([result "false"])
+     (format "~a" (compile-conditional-expression
+                   (syntax->datum end-loop)))
+     #;(for/fold ([result "false"])
                ([end (in-list (syntax->list end-loops))])
+       (displayln end-loops)
        (format "~a || ~a" result (compile-conditional-expression
                                   (syntax->datum end))))))
 
@@ -220,6 +230,9 @@
                         loop-var-bindings
                         assignments
                         assignment-bindings
+                        post-vars
+                        post-var-types
+                        post-var-bindings
                         colors)
     (~a* `("void main(void) {"
            ,@(indent
@@ -235,6 +248,11 @@
                                                      loop-var-bindings)
                      ,@(compile-assignments assignments assignment-bindings)))))
            ,@(indent 1 '("}"))
+           ,@(indent
+              1
+              `(,@(compile-binding-declarations post-vars
+                                                post-var-types
+                                                post-var-bindings)))
            ,@(indent 1 (list (compile-colors colors)))
            "}"))))
 
@@ -320,7 +338,9 @@
     (pattern [test:conditional-expression
               then-body:typed-variable-definition ...
               then-color:color-expression]
-             #:with (then ...) #'(then-body ...)
+             #:with (then ...) #'(then-body.var ...)
+             #:with (then.type ...) #'(then-body.type ...)
+             #:with (then.binding ...) #'(then-body.value ...)
              #:with color #'then-color
              #:with (colors ...) #'(then-color.red
                               then-color.blue
@@ -338,18 +358,24 @@
     (pattern [else
               else-body:typed-variable-definition ...
               loop-iterate-clause:loop-iterate-clause]
-             #:with body #'(else-body ...)
+             #:with (var ...) #'(else-body.var ...)
+             #:with (type ...) #'(else-body.type ...)
+             #:with (binding ...) #'(else-body.value ...)
              #:with iterate #'loop-iterate-clause))
 
   (define-syntax-class cond-form
     #:description "cond clause"
     #:datum-literals (cond)
-    (pattern (cond test-clause:test-clause ...+ else-clause:else-clause)
-             #:with (test ...) #'(test-clause.test ...)
-             #:with ((then ...) ...) #'((test-clause.then ...) ...)
-             #:with (color ...) #'(test-clause.color ...)
-             #:with ((colors ...) ...) #'((test-clause.colors ...) ...)
-             #:with (else ...) #'else-clause.body
+    (pattern (cond test-clause:test-clause else-clause:else-clause)
+             #:with test #'test-clause.test
+             #:with (then ...) #'(test-clause.then ...)
+             #:with (then.type ...) #'(test-clause.then.type ...)
+             #:with (then.binding ...) #'(test-clause.then.binding ...)
+             #:with color #'test-clause.color
+             #:with (colors ...) #'(test-clause.colors ...)
+             #:with (else ...) #'(else-clause.var ...)
+             #:with (else.type ...) #'(else-clause.type ...)
+             #:with (else.binding ...) #'(else-clause.binding ...)
              #:with iterate #'else-clause.iterate))
 
   (define-syntax-class loop-form
@@ -359,11 +385,15 @@
              #:with (var ...) #'(var-binding.var ...)
              #:with (type ...) #'(var-binding.type ...)
              #:with (binding ...) #'(var-binding.binding ...)
-             #:with (test ...) #'(body.test ...)
-             #:with ((then ...) ...) #'((body.then ...) ...)
-             #:with (color ...) #'(body.color ...)
-             #:with ((colors ...) ...) #'((body.colors ...) ...)
+             #:with test #'body.test
+             #:with (then ...) #'(body.then ...)
+             #:with (then.type ...) #'(body.then.type ...)
+             #:with (then.binding ...) #'(body.then.binding ...)
+             #:with color #'body.color
+             #:with (colors ...) #'(body.colors ...)
              #:with (else ...) #'(body.else ...)
+             #:with (else.type ...) #'(body.else.type ...)
+             #:with (else.binding ...) #'(body.else.binding ...)
              #:with iterate #'body.iterate))
 
   (define-syntax-class iterator-definition
@@ -375,11 +405,15 @@
              #:with (var ...) #'(body.var ...)
              #:with (var.type ...) #'(body.type ...)
              #:with (var.binding ...) #'(body.binding ...)
-             #:with (test ...) #'(body.test ...)
-             #:with ((then ...) ...) #'((body.then ...) ...)
-             #:with (color ...) #'(body.color ...)
-             #:with ((colors ...) ...) #'((body.colors ...) ...)
+             #:with test #'body.test
+             #:with (then ...) #'(body.then ...)
+             #:with (then.type ...) #'(body.then.type ...)
+             #:with (then.binding ...) #'(body.then.binding ...)
+             #:with color #'body.color
+             #:with (colors ...) #'(body.colors ...)
              #:with (else ...) #'(body.else ...)
+             #:with (else.type ...) #'(body.else.type ...)
+             #:with (else.binding ...) #'(body.else.binding ...)
              #:with iterate #'body.iterate)))
 
 (define-syntax (define-iterator stx)
@@ -397,19 +431,21 @@
                         (define (i.name [i.arg : i.arg.type] ...) : color
                           (let loop : color ([i.var : i.var.type i.var.binding] ...)
                                (cond [i.test
-                                      i.then ...
+                                      (define i.then : i.then.type i.then.binding)
+                                      ...
                                       (color
                                        (floor
                                         (inexact->exact (* 255.0 i.colors))) ...)]
-                                     ...
-                                     [else i.else ...
-                                           i.iterate]))))]
+                                     [else
+                                      (define i.else : i.else.type i.else.binding)
+                                      ...
+                                      i.iterate]))))]
                     [stripped-context
                      #`#,(syntax-local-introduce (strip-context #'module-body))])
        #`(begin
            (module . stripped-context)))]))
 
-(define-syntax (compile-glsl-program stx)
+#;(define-syntax (compile-glsl-program stx)
   (syntax-parse stx
     [(_ f:fragment-shader)
      #`#,(~a* `(,@(compile-varying-defs #'(f.arg.type ...) #'(f.arg ...))
@@ -424,19 +460,22 @@
                                #'(f.assignment.binding ...)
                                #'(f.colors ...))))]))
 
-(define-syntax (compile-glsl-program& stx)
+(define-syntax (compile-glsl-program stx)
   (syntax-parse stx
     [(_ f:iterator-definition)
      #`#,(~a* `(,@(compile-varying-defs #'(f.arg.type ...) #'(f.arg ...))
                 ,(compile-main #'(f.var ...)
                                #'(f.var.type ...)
                                #'(f.var.binding ...)
-                               #`#,(first #'(f.test ...))
-                               #`#,(first #'((f.then ...) ...))
-                               #'(f.loop-var.type ...)
-                               #'(f.loop-var.binding ...)
-                               #'(f.assignment ...)
-                               #'(f.assignment.binding ...)
+                               #'f.test
+                               #'(f.else ...)
+                               #'(f.else.type ...)
+                               #'(f.else.binding ...)
+                               #'(f.var ...)
+                               #`#,(rest (syntax->list #'f.iterate))
+                               #'(f.then ...)
+                               #'(f.then.type ...)
+                               #'(f.then.binding ...)
                                #'(f.colors ...))))]))
 
 (require racket/gui opengl opengl/util racket/flonum)
@@ -579,22 +618,54 @@ END
 
 (define fragment-shader
   (compile-glsl-program
-   (([float xpos]
-     [float ypos])
-    (([float z_real 0.0]
-      [float z_imaginary 0.0]
-      [float iterations 0.0]
-      [float a xpos]
-      [float bi ypos]
-      [float sq 0.0])
-     ((> iterations 1.0)
-      (> sq 4.0))
-     ([float z_real_square (* z_real z_real)]
-      [float z_imaginary_square (* z_imaginary z_imaginary)]
-      [float z_real_new (+ (- z_real_square z_imaginary_square) a)]
-      [float z_imaginary_new (+ (* 2.0 (* z_real z_imaginary)) bi)])
-     ([z_real z_real_new]
-      [z_imaginary z_imaginary_new]
-      [iterations (+ iterations 0.005)]
-      [sq (+ z_real_square z_imaginary_square)])
-     (iterations iterations iterations 1.0)))))
+   (define-iterator (mandelbrot [xpos : Float] [ypos : Float])
+     (let loop ([z_real : Float 0.0]
+                [z_imaginary : Float 0.0]
+                [iterations : Float 0.0]
+                [sq : Float 0.0])
+       (cond [(or (> iterations 1.0)
+                  (> sq 4.0))
+              (define red : Float iterations)
+              (define green : Float iterations)
+              (define blue : Float iterations)
+              (define alpha : Float 1.0)
+              (color red green blue alpha)]
+             [else
+              (define z_real_square : Float
+                (* z_real z_real))
+              (define z_imaginary_square : Float
+                (* z_imaginary z_imaginary))
+              (define z_real_new : Float
+                (+ xpos (- z_real_square z_imaginary_square)))
+              (define z_imaginary_new : Float
+                (+ (* 2.0 (* z_real z_imaginary)) ypos))
+              (define iterations_new : Float
+                (+ iterations 0.005))
+              (define sq_new : Float
+                (+ z_real_square z_imaginary_square))
+              (loop z_real_new
+                    z_imaginary_new
+                    iterations_new
+                    sq_new)])))))
+
+(display fragment-shader)
+
+#;(([float xpos]
+    [float ypos])
+   (([float z_real 0.0]
+     [float z_imaginary 0.0]
+     [float iterations 0.0]
+     [float a xpos]
+     [float bi ypos]
+     [float sq 0.0])
+    ((> iterations 1.0)
+     (> sq 4.0))
+    ([float z_real_square (* z_real z_real)]
+     [float z_imaginary_square (* z_imaginary z_imaginary)]
+     [float z_real_new (+ (- z_real_square z_imaginary_square) a)]
+     [float z_imaginary_new (+ (* 2.0 (* z_real z_imaginary)) bi)])
+    ([z_real z_real_new]
+     [z_imaginary z_imaginary_new]
+     [iterations (+ iterations 0.005)]
+     [sq (+ z_real_square z_imaginary_square)])
+    (iterations iterations iterations 1.0)))

@@ -100,12 +100,24 @@
      (format "~a" (compile-conditional-expression
                    (syntax->datum end-loop)))))
 
-  (define (compile-assignments assignments assignment-bindings)
-    (for/list ([assignment (in-list (syntax->list assignments))]
-               [binding (in-list (syntax->list assignment-bindings))])
-      (format "~a = ~a;"
-              (syntax-e assignment)
-              (compile-arithmetic-expression (syntax->datum binding)))))
+  (define (genstring already-defined [base "g_"])
+    (define g (gensym base))
+    (cond [(member g already-defined)
+           (genstring already-defined base)]
+          [else g]))
+
+  (define (compile-assignments assignments types assignment-bindings already-defined)
+    (define vars (syntax->list assignments))
+    (define genstrings
+      (for/list ([var (in-list vars)])
+        (genstring already-defined (syntax-e var))))
+    (append
+     (compile-binding-declarations (datum->syntax assignments genstrings assignments)
+                                   types
+                                   assignment-bindings)
+     (for/list ([var (in-list vars)]
+                [genstring (in-list genstrings)])
+       (format "~a = ~a;" (syntax-e var) genstring))))
 
   (define (~a* xs)
     (apply ~a #:separator "\n" xs))
@@ -130,27 +142,33 @@
                         post-var-types
                         post-var-bindings
                         colors)
-    (~a* `("void main(void) {"
+    `("void main(void) {"
+      ,@(indent
+         1
+         `(,@(compile-binding-declarations pre-loop-vars
+                                           pre-loop-var-types
+                                           pre-loop-var-bindings)
+           ,(compile-loop-condition end-loops)
            ,@(indent
               1
-              `(,@(compile-binding-declarations pre-loop-vars
-                                                pre-loop-var-types
-                                                pre-loop-var-bindings)
-                ,(compile-loop-condition end-loops)
-                ,@(indent
-                   1
-                   `(,@(compile-binding-declarations loop-vars
-                                                     loop-var-types
-                                                     loop-var-bindings)
-                     ,@(compile-assignments assignments assignment-bindings)))))
-           ,@(indent 1 '("}"))
-           ,@(indent
-              1
-              `(,@(compile-binding-declarations post-vars
-                                                post-var-types
-                                                post-var-bindings)))
-           ,@(indent 1 (list (compile-colors colors)))
-           "}"))))
+              `(,@(compile-binding-declarations loop-vars
+                                                loop-var-types
+                                                loop-var-bindings)
+                ,@(compile-assignments assignments
+                                       pre-loop-var-types
+                                       assignment-bindings
+                                       (append (syntax->datum pre-loop-vars)
+                                               (syntax->datum loop-vars)
+                                               (syntax->datum assignments)
+                                               (syntax->datum post-vars)))))))
+      ,@(indent 1 '("}"))
+      ,@(indent
+         1
+         `(,@(compile-binding-declarations post-vars
+                                           post-var-types
+                                           post-var-bindings)))
+      ,@(indent 1 (list (compile-colors colors)))
+      "}")))
 
 (begin-for-syntax
   (define-syntax-class type
@@ -345,19 +363,19 @@
   (syntax-parse stx
     [f:iterator-definition
      #`#,(~a* `(,@(compile-varying-defs #'(f.arg.type ...) #'(f.arg ...))
-                ,(compile-main #'(f.var ...)
-                               #'(f.var.type ...)
-                               #'(f.var.binding ...)
-                               #'f.test
-                               #'(f.else ...)
-                               #'(f.else.type ...)
-                               #'(f.else.binding ...)
-                               #'(f.var ...)
-                               #`#,(rest (syntax->list #'f.iterate))
-                               #'(f.then ...)
-                               #'(f.then.type ...)
-                               #'(f.then.binding ...)
-                               #'(f.colors ...))))]))
+                ,@(compile-main #'(f.var ...)
+                                #'(f.var.type ...)
+                                #'(f.var.binding ...)
+                                #'f.test
+                                #'(f.else ...)
+                                #'(f.else.type ...)
+                                #'(f.else.binding ...)
+                                #'(f.var ...)
+                                #`#,(rest (syntax->list #'f.iterate))
+                                #'(f.then ...)
+                                #'(f.then.type ...)
+                                #'(f.then.binding ...)
+                                #'(f.colors ...))))]))
 
 (require racket/gui opengl opengl/util racket/flonum)
 
@@ -515,17 +533,7 @@ END
                 (* z_real z_real))
               (define z_imaginary_square : Float
                 (* z_imaginary z_imaginary))
-              (define z_real_new : Float
-                (+ xpos (- z_real_square z_imaginary_square)))
-              (define z_imaginary_new : Float
-                (+ (* 2.0 (* z_real z_imaginary)) ypos))
-              (define iterations_new : Float
-                (+ iterations 0.005))
-              (define sq_new : Float
-                (+ z_real_square z_imaginary_square))
-              (loop z_real_new
-                    z_imaginary_new
-                    iterations_new
-                    sq_new)]))))
-
-(display fragment-shader)
+              (loop (+ xpos (- z_real_square z_imaginary_square))
+                    (+ (* 2.0 (* z_real z_imaginary)) ypos)
+                    (+ iterations 0.005)
+                    (+ z_real_square z_imaginary_square))]))))

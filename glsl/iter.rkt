@@ -10,105 +10,6 @@
 (provide define-iterator)
 
 (begin-for-syntax
-  (define-syntax-class glsl-arithmetic-expression
-    #:description "glsl arithmetic expression"
-    #:datum-literals (+ - * /)
-    (pattern var:id
-             #:with expr #'var)
-    (pattern n:number
-             #:with expr #'n)
-    (pattern (+ arg:glsl-arithmetic-expression ...)
-             #:with expr #'(+ arg ...))
-    (pattern (- arg:glsl-arithmetic-expression ...)
-             #:with expr #'(- arg ...))
-    (pattern (* arg:glsl-arithmetic-expression ...)
-             #:with expr #'(* arg ...))
-    (pattern (/ arg:glsl-arithmetic-expression ...)
-             #:with expr #'(/ arg ...)))
-
-  (define-syntax-class glsl-conditional-expression
-    #:description "glsl conditional expression"
-    #:datum-literals (or and not < > <= >= =)
-    (pattern b:boolean
-             #:with expr #'b)
-    (pattern glsl-arith:glsl-arithmetic-expression
-             #:with expr #'glsl-arith)
-    (pattern (or arg:glsl-conditional-expression ...)
-             #:with expr #'(or arg ...))
-    (pattern (and arg:glsl-conditional-expression ...)
-             #:with expr #'(and arg ...))
-    (pattern (not arg:glsl-conditional-expression)
-             #:with expr #'(not arg))
-    (pattern (< arg:glsl-arithmetic-expression ...)
-             #:with expr #'(< arg ...))
-    (pattern (> arg:glsl-arithmetic-expression ...)
-             #:with expr #'(> arg ...))
-    (pattern (<= arg:glsl-arithmetic-expression ...)
-             #:with expr #'(<= arg ...))
-    (pattern (>= arg:glsl-arithmetic-expression ...)
-             #:with expr #'(>= arg ...))
-    (pattern (= arg:glsl-arithmetic-expression ...)
-             #:with expr #'(= arg ...)))
-
-  (define-syntax-class glsl-type
-    #:description "glsl type"
-    #:datum-literals (float int)
-    (pattern float)
-    (pattern int))
-
-  (define-syntax-class varying
-    #:description "glsl varying variable declaration"
-    (pattern [type:glsl-type name:id]))
-
-  (define-syntax-class condition
-    (pattern x))
-
-  (define-syntax-class definition
-    (pattern [type:glsl-type name:id binding:glsl-arithmetic-expression]))
-
-  (define-syntax-class update
-    (pattern [name:id binding:glsl-arithmetic-expression]))
-
-  (define-syntax-class color
-    (pattern [red:glsl-arithmetic-expression
-              green:glsl-arithmetic-expression
-              blue:glsl-arithmetic-expression
-              alpha:glsl-arithmetic-expression]
-             #:with (colors ...) #'(red green blue alpha)))
-
-  (define-syntax-class main-function
-    (pattern ((pre-loop-def:definition ...)
-              (end-loop-expr:glsl-conditional-expression ...)
-              (defs:definition ...)
-              (var-assignment:update ...)
-              c:color)
-             #:with (pre-loop-var ...) #'(pre-loop-def.name ...)
-             #:with (pre-loop-var.type ...) #'(pre-loop-def.type ...)
-             #:with (pre-loop-var.binding ...) #'(pre-loop-def.binding ...)
-             #:with (end-loop.expr ...) #'(end-loop-expr.expr ...)
-             #:with (loop-var ...) #'(defs.name ...)
-             #:with (loop-var.type ...) #'(defs.type ...)
-             #:with (loop-var.binding ...) #'(defs.binding ...)
-             #:with (assignment ...) #'(var-assignment.name ...)
-             #:with (assignment.binding ...) #'(var-assignment.binding ...)
-             #:with (colors ...) #'(c.colors ...)))
-
-  (define-syntax-class fragment-shader
-    (pattern ((var:varying ...) main:main-function)
-             #:with (arg ...) #'(var.name ...)
-             #:with (arg.type ...) #'(var.type ...)
-             #:with (pre-loop-var ...) #'(main.pre-loop-var ...)
-             #:with (pre-loop-var.type ...) #'(main.pre-loop-var.type ...)
-             #:with (pre-loop-var.binding ...) #'(main.pre-loop-var.binding ...)
-             #:with (end-loop ...) #'(main.end-loop.expr ...)
-             #:with (loop-var ...) #'(main.loop-var ...)
-             #:with (loop-var.type ...) #'(main.loop-var.type ...)
-             #:with (loop-var.binding ...) #'(main.loop-var.binding ...)
-             #:with (assignment ...) #'(main.assignment ...)
-             #:with (assignment.binding ...) #'(main.assignment.binding ...)
-             #:with (colors ...) #'(main.colors ...))))
-
-(begin-for-syntax
   (define (indent n strings #:spaces [spaces 2])
     (for/list ([s (in-list strings)])
       (string-append (make-string (* spaces n) #\Space) s)))
@@ -195,14 +96,9 @@
 
   (define (compile-loop-condition end-loop)
     (format
-     "while (!(~a)) {"
+     "while (!~a) {"
      (format "~a" (compile-conditional-expression
-                   (syntax->datum end-loop)))
-     #;(for/fold ([result "false"])
-               ([end (in-list (syntax->list end-loops))])
-       (displayln end-loops)
-       (format "~a || ~a" result (compile-conditional-expression
-                                  (syntax->datum end))))))
+                   (syntax->datum end-loop)))))
 
   (define (compile-assignments assignments assignment-bindings)
     (for/list ([assignment (in-list (syntax->list assignments))]
@@ -445,24 +341,9 @@
        #`(begin
            (module . stripped-context)))]))
 
-#;(define-syntax (compile-glsl-program stx)
-  (syntax-parse stx
-    [(_ f:fragment-shader)
-     #`#,(~a* `(,@(compile-varying-defs #'(f.arg.type ...) #'(f.arg ...))
-                ,(compile-main #'(f.pre-loop-var ...)
-                               #'(f.pre-loop-var.type ...)
-                               #'(f.pre-loop-var.binding ...)
-                               #'(f.end-loop ...)
-                               #'(f.loop-var ...)
-                               #'(f.loop-var.type ...)
-                               #'(f.loop-var.binding ...)
-                               #'(f.assignment ...)
-                               #'(f.assignment.binding ...)
-                               #'(f.colors ...))))]))
-
 (define-syntax (compile-glsl-program stx)
   (syntax-parse stx
-    [(_ f:iterator-definition)
+    [f:iterator-definition
      #`#,(~a* `(,@(compile-varying-defs #'(f.arg.type ...) #'(f.arg ...))
                 ,(compile-main #'(f.var ...)
                                #'(f.var.type ...)
@@ -617,8 +498,7 @@ END
 (send frame show #t)
 
 (define fragment-shader
-  (compile-glsl-program
-   (define-iterator (mandelbrot [xpos : Float] [ypos : Float])
+  (compile-glsl-program (mandelbrot [xpos : Float] [ypos : Float])
      (let loop ([z_real : Float 0.0]
                 [z_imaginary : Float 0.0]
                 [iterations : Float 0.0]
@@ -646,26 +526,6 @@ END
               (loop z_real_new
                     z_imaginary_new
                     iterations_new
-                    sq_new)])))))
+                    sq_new)]))))
 
 (display fragment-shader)
-
-#;(([float xpos]
-    [float ypos])
-   (([float z_real 0.0]
-     [float z_imaginary 0.0]
-     [float iterations 0.0]
-     [float a xpos]
-     [float bi ypos]
-     [float sq 0.0])
-    ((> iterations 1.0)
-     (> sq 4.0))
-    ([float z_real_square (* z_real z_real)]
-     [float z_imaginary_square (* z_imaginary z_imaginary)]
-     [float z_real_new (+ (- z_real_square z_imaginary_square) a)]
-     [float z_imaginary_new (+ (* 2.0 (* z_real z_imaginary)) bi)])
-    ([z_real z_real_new]
-     [z_imaginary z_imaginary_new]
-     [iterations (+ iterations 0.005)]
-     [sq (+ z_real_square z_imaginary_square)])
-    (iterations iterations iterations 1.0)))

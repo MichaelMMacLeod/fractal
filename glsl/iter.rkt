@@ -74,24 +74,24 @@
        (format "(!~a)" (compile-conditional-expression a))]
       [`(< ,a ,b)
        (compile-infix-expression "<"
-                                 (compile-conditional-expression a)
-                                 (compile-conditional-expression b))]
+                                 (compile-arithmetic-expression a)
+                                 (compile-arithmetic-expression b))]
       [`(> ,a ,b)
        (compile-infix-expression ">"
-                                 (compile-conditional-expression a)
-                                 (compile-conditional-expression b))]
+                                 (compile-arithmetic-expression a)
+                                 (compile-arithmetic-expression b))]
       [`(<= ,a ,b)
        (compile-infix-expression "<="
-                                 (compile-conditional-expression a)
-                                 (compile-conditional-expression b))]
+                                 (compile-arithmetic-expression a)
+                                 (compile-arithmetic-expression b))]
       [`(>= ,a ,b)
        (compile-infix-expression ">="
-                                 (compile-conditional-expression a)
-                                 (compile-conditional-expression b))]
+                                 (compile-arithmetic-expression a)
+                                 (compile-arithmetic-expression b))]
       [`(= ,a ,b)
        (compile-infix-expression "="
-                                 (compile-conditional-expression a)
-                                 (compile-conditional-expression b))]
+                                 (compile-arithmetic-expression a)
+                                 (compile-arithmetic-expression b))]
       [x (~a x)]))
 
   (define (compile-loop-condition end-loop)
@@ -516,6 +516,27 @@ END
 (send frame show #t)
 
 (define fragment-shader
+  (compile-glsl-program (julia [xpos : Float] [ypos : Float])
+    (let loop ([z_real : Float xpos]
+               [z_imaginary : Float ypos]
+               [iterations : Float 0.0])
+         (cond [(or (> (+ (* z_real z_real)
+                          (* z_imaginary z_imaginary))
+                       4.0)
+                    (>= iterations 1.0))
+                (color iterations iterations iterations 1.0)]
+               [else
+                (define z_real_square : Float (* z_real z_real))
+                (define z_imaginary_square : Float (* z_imaginary z_imaginary))
+                (define c_real : Float 0.35)
+                (define c_imaginary : Float 0.35)
+                (loop (+ (- z_real_square z_imaginary_square) c_real)
+                      (+ (* 2.0 (* z_real z_imaginary)) c_imaginary)
+                      (+ iterations 0.05))]))))
+
+(displayln fragment-shader)
+
+#;(define fragment-shader
   (compile-glsl-program (mandelbrot [xpos : Float] [ypos : Float])
      (let loop ([z_real : Float 0.0]
                 [z_imaginary : Float 0.0]

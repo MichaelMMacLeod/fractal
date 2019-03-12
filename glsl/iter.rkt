@@ -7,7 +7,7 @@
                      syntax/to-string
                      syntax/strip-context))
 
-(provide define-iterator)
+(provide define-iterator compile-glsl-program)
 
 (begin-for-syntax
   (define (indent n strings #:spaces [spaces 2])
@@ -377,12 +377,12 @@
                                 #'(f.then.binding ...)
                                 #'(f.colors ...))))]))
 
-(require racket/gui opengl opengl/util racket/flonum)
+#;(require racket/gui opengl opengl/util racket/flonum)
 
-(define (resize w h)
+#;(define (resize w h)
   (glViewport 0 0 w h))
 
-(define vertex-shader
+#;(define vertex-shader
   #<<END
 #version 420
 
@@ -407,7 +407,7 @@ void main(void)
 END
   )
 
-(define-syntax (glSetUniformLocations stx)
+#;(define-syntax (glSetUniformLocations stx)
   (syntax-case stx ()
     [(_ program (var type value) ...)
      (with-syntax ([(function-name ...)
@@ -422,9 +422,9 @@ END
                           value)
            ...))]))
 
-(require ffi/vector)
+#;(require ffi/vector)
 
-(define (draw-opengl prg r i w h z)
+#;(define (draw-opengl prg r i w h z)
   (glClearColor 0.0 0.0 0.0 0.0)
   (glClear GL_COLOR_BUFFER_BIT)
 
@@ -454,7 +454,7 @@ END
       (glBindVertexArray 1)
       (glDrawArrays GL_TRIANGLES 0 6))))
 
-(define my-canvas%
+#;(define my-canvas%
   (class* canvas% ()
     (inherit with-gl-context swap-gl-buffers)
     (define the-program #f)
@@ -522,17 +522,17 @@ END
                [style '(gl no-autoclear)])
     #;(super-instantiate () (style '(gl no-autoclear)))))
 
-(define frame (new frame% [label "OpenGL test"]
+#;(define frame (new frame% [label "OpenGL test"]
                    [width 600]
                    [height 600]))
 
-(define canvas (new my-canvas% [parent frame]))
+#;(define canvas (new my-canvas% [parent frame]))
 
-(send canvas focus)
+#;(send canvas focus)
 
-(send frame show #t)
+#;(send frame show #t)
 
-(define fragment-shader
+#;(define fragment-shader
   (compile-glsl-program (julia [xpos : Float] [ypos : Float])
     (let loop ([z_real : Float xpos]
                [z_imaginary : Float ypos]
@@ -574,3 +574,4 @@ END
                     (+ iterations 0.005)
                     (+ z_real_square z_imaginary_square))]))))
 
+#;(displayln fragment-shader)

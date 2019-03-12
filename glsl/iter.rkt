@@ -400,8 +400,10 @@ out float ypos;
 void main(void)
 {
  // vertex_position.x,y :: [-2.0 .. 2.0]
- float vert_x = (vertex_position.x + 2.0) / 4.0;
- float vert_y = (vertex_position.y + 2.0) / 4.0;
+ //float vert_x = (vertex_position.x + 2.0) / 4.0;
+ //float vert_y = (vertex_position.y + 2.0) / 4.0;
+ float vert_x = vertex_position.x;
+ float vert_y = vertex_position.y;
 
  xpos = real + zoom * vert_x * w;
  ypos = imag + zoom * vert_y * h;
@@ -439,12 +441,15 @@ END
                          (w 1f w)
                          (h 1f h))
   (let ([buffer (u32vector-ref (glGenBuffers 1) 0)]
-        [positionData (f32vector -0.8 -0.8 0.0
-                                  0.8 -0.8 0.0
-                                  0.0  0.8 0.0)])
+        [positionData (f32vector -1.0 -1.0 0.0
+                                 1.0 -1.0 0.0
+                                 -1.0 1.0 0.0
+                                 -1.0 1.0 0.0
+                                 1.0 -1.0 0.0
+                                 1.0 1.0 0.0)])
     (glBindBuffer GL_ARRAY_BUFFER buffer)
     (glBufferData GL_ARRAY_BUFFER
-                  (* 9 (gl-type-sizeof GL_FLOAT))
+                  (* 18 (gl-type-sizeof GL_FLOAT))
                   (gl-vector->cpointer positionData)
                   GL_STATIC_DRAW)
     (let ([vertex-array (glGenVertexArrays 1)])
@@ -453,7 +458,7 @@ END
       (glBindBuffer GL_ARRAY_BUFFER buffer)
       (glVertexAttribPointer 0 3 GL_FLOAT #f 0 #f)
       (glBindVertexArray 1)
-      (glDrawArrays GL_TRIANGLES 0 3))))
+      (glDrawArrays GL_TRIANGLES 0 6))))
 
 (define my-canvas%
   (class* canvas% ()

@@ -422,7 +422,7 @@ END
                           value)
            ...))]))
 
-(require ffi/vector (only-in ffi/unsafe _cpointer/null))
+(require ffi/vector)
 
 (define (draw-opengl prg r i w h z)
   (glClearColor 0.0 0.0 0.0 0.0)

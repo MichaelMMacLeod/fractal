@@ -384,22 +384,67 @@
 
 (define vertex-shader
   #<<END
+#version 420
+
 uniform float real;
 uniform float imag;
 uniform float w;
 uniform float h;
 uniform float zoom;
 
-varying float xpos;
-varying float ypos;
+in vec2 vertex_position;
+
+out float xpos;
+out float ypos;
 
 void main(void)
 {
- xpos = real + zoom * (gl_Vertex.x * w - w / 2);
- ypos = imag + zoom * (gl_Vertex.y * h - h / 2);
+ float vert_x = vertex_position.x - 0.5;
+ float vert_y = vertex_position.y - 0.5;
 
- gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+ xpos = real + zoom * (vertex_position.x * w - w / 2);
+ ypos = imag + zoom * (vertex_position.y * h - h / 2);
+
+ gl_Position = vec4(vert_x, vert_y, 1.0, 1.0);
  }
+END
+  )
+
+#;(define fragment-shader
+  #<<END
+#version 420
+
+in float xpos;
+in float ypos;
+
+out vec4 frag_color;
+
+void main(void) {
+  float z_real = 0.0;
+  float z_imaginary = 0.0;
+  float iterations = 0.0;
+  float sq = 0.0;
+
+  while (!((iterations > 1.0) || (sq > 4.0))) {
+    float z_real_square = (z_real * z_real);
+    float z_imaginary_square = (z_imaginary * z_imaginary);
+    float z_real31916 = (xpos + (z_real_square - z_imaginary_square));
+    float z_imaginary31917 = ((2.0 * (z_real * z_imaginary)) + ypos);
+    float iterations31918 = (iterations + 0.005);
+    float sq31919 = (z_real_square + z_imaginary_square);
+    z_real = z_real31916;
+    z_imaginary = z_imaginary31917;
+    iterations = iterations31918;
+    sq = sq31919;
+  }
+
+  float red = iterations;
+  float green = iterations;
+  float blue = iterations;
+  float alpha = 1.0;
+
+  frag_color = vec4(red, blue, green, alpha);
+}
 END
   )
 
@@ -429,18 +474,23 @@ END
                          (w 1f w)
                          (h 1f h))
 
-  (glMatrixMode GL_MODELVIEW)
-  (glLoadIdentity)
-  (glOrtho 0.0 1.0 0.0 1.0 0.0 1.0)
-  (glMatrixMode GL_PROJECTION)
-  (glLoadIdentity)
-  (glOrtho -1.0 1.0 -1.0 1.0 0.0 1.0)
+  ;(glMatrixMode GL_MODELVIEW)
+  ;(glLoadIdentity)
+  ;(glOrtho 0.0 1.0 0.0 1.0 0.0 1.0)
+  ;(glMatrixMode GL_PROJECTION)
+  ;(glLoadIdentity)
+  ;(glOrtho -1.0 1.0 -1.0 1.0 0.0 1.0)
 
   (glBegin GL_QUADS)
-  (glVertex2f 0.0 0.0)
-  (glVertex2f 0.0 h)
-  (glVertex2f w h)
-  (glVertex2f w 0.0)
+  (glVertex2f (- (/ w 2.0)) (- (/ h 2.0)))
+  (glVertex2f (- (/ w 2.0)) (/ h 2.0))
+  (glVertex2f (/ w 2.0) (/ h 2.0))
+  (glVertex2f (/ w 2.0) (- (/ h 2.0)))
+
+  ;(glVertex2f 0.0 0.0)
+  ;(glVertex2f 0.0 h)
+  ;(glVertex2f w h)
+  ;(glVertex2f w 0.0)
   (glEnd))
 
 (define my-canvas%
@@ -450,7 +500,7 @@ END
 
     (define real 0.0)
     (define imag 0.0)
-    (define zoom 1.0)
+    (define zoom 0.005)
 
     (define/override (on-event event)
       (cond [(send event button-down? 'left)
@@ -515,7 +565,7 @@ END
 
 (send frame show #t)
 
-(define fragment-shader
+#;(define fragment-shader
   (compile-glsl-program (julia [xpos : Float] [ypos : Float])
     (let loop ([z_real : Float xpos]
                [z_imaginary : Float ypos]
@@ -534,9 +584,7 @@ END
                       (+ (* 2.0 (* z_real z_imaginary)) c_imaginary)
                       (+ iterations 0.05))]))))
 
-(displayln fragment-shader)
-
-#;(define fragment-shader
+(define fragment-shader
   (compile-glsl-program (mandelbrot [xpos : Float] [ypos : Float])
      (let loop ([z_real : Float 0.0]
                 [z_imaginary : Float 0.0]
@@ -558,3 +606,4 @@ END
                     (+ (* 2.0 (* z_real z_imaginary)) ypos)
                     (+ iterations 0.005)
                     (+ z_real_square z_imaginary_square))]))))
+

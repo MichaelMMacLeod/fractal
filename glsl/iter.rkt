@@ -410,44 +410,6 @@ void main(void)
 END
   )
 
-#;(define fragment-shader
-  #<<END
-#version 420
-
-in float xpos;
-in float ypos;
-
-out vec4 frag_color;
-
-void main(void) {
-  float z_real = 0.0;
-  float z_imaginary = 0.0;
-  float iterations = 0.0;
-  float sq = 0.0;
-
-  while (!((iterations > 1.0) || (sq > 4.0))) {
-    float z_real_square = (z_real * z_real);
-    float z_imaginary_square = (z_imaginary * z_imaginary);
-    float z_real31916 = (xpos + (z_real_square - z_imaginary_square));
-    float z_imaginary31917 = ((2.0 * (z_real * z_imaginary)) + ypos);
-    float iterations31918 = (iterations + 0.005);
-    float sq31919 = (z_real_square + z_imaginary_square);
-    z_real = z_real31916;
-    z_imaginary = z_imaginary31917;
-    iterations = iterations31918;
-    sq = sq31919;
-  }
-
-  float red = iterations;
-  float green = iterations;
-  float blue = iterations;
-  float alpha = 1.0;
-
-  frag_color = vec4(red, blue, green, alpha);
-}
-END
-  )
-
 (define-syntax (glSetUniformLocations stx)
   (syntax-case stx ()
     [(_ program (var type value) ...)
@@ -474,23 +436,12 @@ END
                          (w 1f w)
                          (h 1f h))
 
-  ;(glMatrixMode GL_MODELVIEW)
-  ;(glLoadIdentity)
-  ;(glOrtho 0.0 1.0 0.0 1.0 0.0 1.0)
-  ;(glMatrixMode GL_PROJECTION)
-  ;(glLoadIdentity)
-  ;(glOrtho -1.0 1.0 -1.0 1.0 0.0 1.0)
-
   (glBegin GL_QUADS)
   (glVertex2f (- (/ w 2.0)) (- (/ h 2.0)))
   (glVertex2f (- (/ w 2.0)) (/ h 2.0))
   (glVertex2f (/ w 2.0) (/ h 2.0))
   (glVertex2f (/ w 2.0) (- (/ h 2.0)))
 
-  ;(glVertex2f 0.0 0.0)
-  ;(glVertex2f 0.0 h)
-  ;(glVertex2f w h)
-  ;(glVertex2f w 0.0)
   (glEnd))
 
 (define my-canvas%

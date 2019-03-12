@@ -471,16 +471,18 @@ END
              (define height (send this get-height))
              (define new-center-real
                (fl+ real
-                    (fl* zoom
-                         (fl- (->fl x)
-                              (fl/ (->fl width)
-                                   2.0)))))
+                    (fl* 2.0
+                         (fl* zoom
+                              (fl- (->fl x)
+                                   (fl/ (->fl width)
+                                        2.0))))))
              (define new-center-imaginary
                (fl+ imag
-                    (fl* zoom
-                         (fl- (->fl y)
-                              (fl/ (->fl height)
-                                   2.0)))))
+                    (fl* 2.0
+                         (fl* zoom
+                              (fl- (->fl y)
+                                   (fl/ (->fl height)
+                                        2.0))))))
              (set! real new-center-real)
              (set! imag new-center-imaginary)
              (send this refresh)]))

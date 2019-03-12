@@ -134,10 +134,10 @@
     (define/override (on-char event)
       (define code (send event get-key-code))
       (cond [(eq? #\i code)
-             (set! zoom (fl* zoom 0.95))
+             (set! zoom (fl* zoom 0.99))
              (send this refresh)]
             [(eq? #\o code)
-             (set! zoom (fl* zoom 1.15))
+             (set! zoom (fl* zoom 1.01))
              (send this refresh)]))
 
     (define/override (on-paint)
@@ -160,11 +160,51 @@
     (define/override (on-size width height)
       (with-gl-context (lambda () (resize width height))))))
 
-#;(define frame (new frame% [label "OpenGL Canvas Test"]
+(define frame (new frame% [label "OpenGL Canvas Test"]
                    [width 600]
                    [height 600]))
 
-#;(send frame show #t)
+(send frame show #t)
+
+(define fragment-shader
+  @~a{#version 420
+
+      in float center_real;
+      in float center_imaginary;
+
+      float loop(float z_real, float z_imaginary, float iterations, float sq)
+      {
+       while (true)
+       {
+        if ((iterations > 1.0) || (sq > 4.0))
+        {
+         return iterations;
+        }
+        else
+        {
+         float z_real_square = z_real * z_real;
+         float z_imaginary_square = z_imaginary * z_imaginary;
+
+         float z_real_1 = center_real + z_real_square - z_imaginary_square;
+         float z_imaginary_1 = center_imaginary + 2.0 * z_real * z_imaginary;
+         float iterations_1 = iterations + 0.005;
+         float sq_1 = z_real_square + z_imaginary_square;
+
+         z_real = z_real_1;
+         z_imaginary = z_imaginary_1;
+         iterations = iterations_1;
+         sq = sq_1;
+        }
+       }
+      }
+
+      void main(void)
+      {
+       float iterations = loop(0.0, 0.0, 0.0, 0.0);
+
+       gl_FragColor = vec4(iterations, iterations, iterations, 1.0);
+      }
+      })
 
 #;(define fragment-shader
   (compile-glsl-program (mandelbrot [center_real : Float] [center_imaginary : Float])
@@ -183,7 +223,9 @@
                    (+ iterations 0.005)
                    (+ z_real_square z_imaginary_square))]))))
 
-#;(define opengl-fractal-canvas
+(display fragment-shader)
+
+(define opengl-fractal-canvas
   (new opengl-fractal-canvas% [parent frame] [fragment-shader fragment-shader]))
 
 

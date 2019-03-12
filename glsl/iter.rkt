@@ -399,14 +399,15 @@ out float ypos;
 
 void main(void)
 {
- float vert_x = vertex_position.x - 0.5;
- float vert_y = vertex_position.y - 0.5;
+ // vertex_position.x,y :: [-2.0 .. 2.0]
+ float vert_x = (vertex_position.x + 2.0) / 4.0;
+ float vert_y = (vertex_position.y + 2.0) / 4.0;
 
- xpos = real + zoom * (vertex_position.x * w - w / 2);
- ypos = imag + zoom * (vertex_position.y * h - h / 2);
+ xpos = real + zoom * vert_x * w;
+ ypos = imag + zoom * vert_y * h;
 
  gl_Position = vec4(vert_x, vert_y, 1.0, 1.0);
- }
+}
 END
   )
 
@@ -425,6 +426,8 @@ END
                           value)
            ...))]))
 
+(require ffi/vector (only-in ffi/unsafe _cpointer/null))
+
 (define (draw-opengl prg r i w h z)
   (glClearColor 0.0 0.0 0.0 0.0)
   (glClear GL_COLOR_BUFFER_BIT)
@@ -435,14 +438,22 @@ END
                          (zoom 1f z)
                          (w 1f w)
                          (h 1f h))
-
-  (glBegin GL_QUADS)
-  (glVertex2f (- (/ w 2.0)) (- (/ h 2.0)))
-  (glVertex2f (- (/ w 2.0)) (/ h 2.0))
-  (glVertex2f (/ w 2.0) (/ h 2.0))
-  (glVertex2f (/ w 2.0) (- (/ h 2.0)))
-
-  (glEnd))
+  (let ([buffer (u32vector-ref (glGenBuffers 1) 0)]
+        [positionData (f32vector -0.8 -0.8 0.0
+                                  0.8 -0.8 0.0
+                                  0.0  0.8 0.0)])
+    (glBindBuffer GL_ARRAY_BUFFER buffer)
+    (glBufferData GL_ARRAY_BUFFER
+                  (* 9 (gl-type-sizeof GL_FLOAT))
+                  (gl-vector->cpointer positionData)
+                  GL_STATIC_DRAW)
+    (let ([vertex-array (glGenVertexArrays 1)])
+      (glBindVertexArray 1)
+      (glEnableVertexAttribArray 0)
+      (glBindBuffer GL_ARRAY_BUFFER buffer)
+      (glVertexAttribPointer 0 3 GL_FLOAT #f 0 #f)
+      (glBindVertexArray 1)
+      (glDrawArrays GL_TRIANGLES 0 3))))
 
 (define my-canvas%
   (class* canvas% ()
@@ -504,7 +515,11 @@ END
             (swap-gl-buffers))))
     (define/override (on-size width height)
       (with-gl-context (λ() (resize width height))))
-    (super-instantiate () (style '(gl no-autoclear)))))
+    (define gl-config (new gl-config%))
+    (send gl-config set-legacy? #f)
+    (super-new [gl-config gl-config]
+               [style '(gl no-autoclear)])
+    #;(super-instantiate () (style '(gl no-autoclear)))))
 
 (define frame (new frame% [label "OpenGL test"]
                    [width 600]

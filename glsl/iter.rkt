@@ -19,10 +19,10 @@
       ['Float 'float]
       ['Integer 'int]))
 
-  (define (compile-varying-defs types args)
+  (define (compile-in-defs types args)
     (for/list ([type (in-list (syntax->list types))]
                [arg (in-list (syntax->list args))])
-      (format "varying ~a ~a;"
+      (format "in ~a ~a;"
               (type->glsl-type (syntax-e type))
               (syntax-e arg))))
 
@@ -362,7 +362,7 @@
 (define-syntax (compile-glsl-program stx)
   (syntax-parse stx
     [f:iterator-definition
-     #`#,(~a* `(,@(compile-varying-defs #'(f.arg.type ...) #'(f.arg ...))
+     #`#,(~a* `(,@(compile-in-defs #'(f.arg.type ...) #'(f.arg ...))
                 ,@(compile-main #'(f.var ...)
                                 #'(f.var.type ...)
                                 #'(f.var.binding ...)

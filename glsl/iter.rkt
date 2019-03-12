@@ -516,7 +516,7 @@ END
 
 (send frame show #t)
 
-#;(define fragment-shader
+(define fragment-shader
   (compile-glsl-program (julia [xpos : Float] [ypos : Float])
     (let loop ([z_real : Float xpos]
                [z_imaginary : Float ypos]
@@ -535,7 +535,7 @@ END
                       (+ (* 2.0 (* z_real z_imaginary)) c_imaginary)
                       (+ iterations 0.05))]))))
 
-(define fragment-shader
+#;(define fragment-shader
   (compile-glsl-program (mandelbrot [xpos : Float] [ypos : Float])
      (let loop ([z_real : Float 0.0]
                 [z_imaginary : Float 0.0]

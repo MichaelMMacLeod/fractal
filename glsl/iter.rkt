@@ -399,16 +399,10 @@ out float ypos;
 
 void main(void)
 {
- // vertex_position.x,y :: [-2.0 .. 2.0]
- //float vert_x = (vertex_position.x + 2.0) / 4.0;
- //float vert_y = (vertex_position.y + 2.0) / 4.0;
- float vert_x = vertex_position.x;
- float vert_y = vertex_position.y;
+ xpos = real + zoom * vertex_position.x * w;
+ ypos = imag + zoom * vertex_position.y * h;
 
- xpos = real + zoom * vert_x * w;
- ypos = imag + zoom * vert_y * h;
-
- gl_Position = vec4(vert_x, vert_y, 1.0, 1.0);
+ gl_Position = vec4(vertex_position, 1.0, 1.0);
 }
 END
   )

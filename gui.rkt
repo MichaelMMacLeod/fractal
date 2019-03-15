@@ -1,7 +1,6 @@
 #lang at-exp racket/base
 
-(require "fractal-state.rkt"
-         "glsl/iter.rkt"
+(require (submod "iterators/mandelbrot.rkt" iterator:opengl)
          ffi/vector
          opengl
          opengl/util
@@ -10,19 +9,6 @@
          racket/flonum
          racket/format
          racket/gui/base)
-
-(provide
- (contract-out
-  [fractal-canvas%
-   (and/c
-    (subclass?/c canvas%)
-    (class/c
-     [get-draw-thread (->m thread?)]
-     [set-draw-rate (->m (>=/c 0) void?)]
-     (override [on-event (->m (is-a?/c mouse-event%) void?)]
-               [on-char (->m (is-a?/c key-event%) void?)]
-               [on-paint (->m void?)]
-               [on-size (->m dimension-integer? dimension-integer? void?)])))]))
 
 (define (draw-triangles glsl-program
                         fractal-center-real
@@ -134,10 +120,10 @@
     (define/override (on-char event)
       (define code (send event get-key-code))
       (cond [(eq? #\i code)
-             (set! zoom (fl* zoom 0.99))
+             (set! zoom (fl* zoom 0.95))
              (send this refresh)]
             [(eq? #\o code)
-             (set! zoom (fl* zoom 1.01))
+             (set! zoom (fl* zoom 1.05))
              (send this refresh)]))
 
     (define/override (on-paint)
@@ -166,7 +152,14 @@
 
 (send frame show #t)
 
-(define fragment-shader
+(define fragment-shader iterator)
+
+(define opengl-fractal-canvas
+  (new opengl-fractal-canvas% [parent frame] [fragment-shader fragment-shader]))
+
+(displayln fragment-shader)
+
+#;(define fragment-shader
   @~a{#version 420
 
       in float center_real;
@@ -205,76 +198,3 @@
        gl_FragColor = vec4(iterations, iterations, iterations, 1.0);
       }
       })
-
-#;(define fragment-shader
-  (compile-glsl-program (mandelbrot [center_real : Float] [center_imaginary : Float])
-    (let loop ([z_real : Float 0.0]
-               [z_imaginary : Float 0.0]
-               [iterations : Float 0.0]
-               [sq : Float 0.0])
-      (cond [(or (> iterations 1.0)
-                 (> sq 4.0))
-             (color iterations iterations iterations 1.0)]
-            [else
-             (define z_real_square : Float (* z_real z_real))
-             (define z_imaginary_square : Float (* z_imaginary z_imaginary))
-             (loop (+ center_real (- z_real_square z_imaginary_square))
-                   (+ (* 2.0 (* z_real z_imaginary)) center_imaginary)
-                   (+ iterations 0.005)
-                   (+ z_real_square z_imaginary_square))]))))
-
-(display fragment-shader)
-
-(define opengl-fractal-canvas
-  (new opengl-fractal-canvas% [parent frame] [fragment-shader fragment-shader]))
-
-
-(define fractal-canvas%
-  (class canvas%
-    (super-new)
-
-    (init-field state
-                [draw-rate 0.01])
-
-    (define draw-thread (create-draw-thread))
-
-    (define/public (get-draw-thread) draw-thread)
-
-    (define/public (create-draw-thread)
-      (thread (lambda ()
-                (for ([forever (in-naturals)])
-                  (send state redraw-bitmap)
-                  (send this refresh)
-                  (sleep draw-rate)))))
-
-    (define/public (set-draw-rate new-draw-rate)
-      (set! draw-rate new-draw-rate))
-
-    (define/override (on-event event)
-      (cond [(send event button-down? 'left)
-             (define x (send event get-x))
-             (define y (send event get-y))
-             (send state move-center x y)
-             (send state redraw-cache)]
-            [else (void)]))
-
-    (define/override (on-char event)
-      (cond [(eq? #\i (send event get-key-code))
-             (send state zoom-in)
-             (send state redraw-cache)]
-            [(eq? #\o (send event get-key-code))
-             (send state zoom-out)
-             (send state redraw-cache)]
-            [(eq? #\s (send event get-key-code))
-             (send state
-                   save-bitmap
-                   (~a "fractal-" (current-milliseconds))
-                   'png)]))
-
-    (define/override (on-paint)
-      (define dc (send this get-dc))
-      (send dc draw-bitmap (send state get-bitmap) 0 0))
-
-    (define/override (on-size new-width new-height)
-      (send state resize new-width new-height)
-      (send state redraw-cache))))

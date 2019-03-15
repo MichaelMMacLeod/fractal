@@ -7,7 +7,7 @@
                      syntax/to-string
                      syntax/strip-context))
 
-(provide define-iterator compile-glsl-program)
+(provide define-iterator)
 
 (begin-for-syntax
   (define (indent n strings #:spaces [spaces 2])
@@ -330,7 +330,25 @@
              #:with (else.binding ...) #'(body.else.binding ...)
              #:with iterate #'body.iterate)))
 
-(define-syntax (define-iterator stx)
+(define-for-syntax (compile-iterator/typed stx)
+  (syntax-parse stx
+    [(_ (name argument ...) body ... return)
+     #`(module
+           #,@(syntax-local-introduce
+               (strip-context
+                #'(iterator:typed
+                   typed/racket/base
+                   (provide iterator)
+                   (struct color ([red : Float]
+                                  [green : Float]
+                                  [blue : Float]
+                                  [Alpha : Float])
+                     #:prefab)
+                   (define (iterator argument ...) : color
+                     body ...
+                     return)))))]))
+
+#;(define-syntax (compile-iterator/typed stx)
   (syntax-parse stx
     [i:iterator-definition
      (with-syntax* ([module-body
@@ -359,20 +377,36 @@
        #`(begin
            (module . stripped-context)))]))
 
-(define-syntax (compile-glsl-program stx)
+(define-for-syntax (compile-iterator/opengl stx)
   (syntax-parse stx
     [f:iterator-definition
-     #`#,(~a* `(,@(compile-in-defs #'(f.arg.type ...) #'(f.arg ...))
-                ,@(compile-main #'(f.var ...)
-                                #'(f.var.type ...)
-                                #'(f.var.binding ...)
-                                #'f.test
-                                #'(f.else ...)
-                                #'(f.else.type ...)
-                                #'(f.else.binding ...)
-                                #'(f.var ...)
-                                #`#,(rest (syntax->list #'f.iterate))
-                                #'(f.then ...)
-                                #'(f.then.type ...)
-                                #'(f.then.binding ...)
-                                #'(f.colors ...))))]))
+     (with-syntax
+       ([the-iterator
+         #`#,(~a* `(,@(compile-in-defs #'(f.arg.type ...) #'(f.arg ...))
+                    ,@(compile-main #'(f.var ...)
+                                    #'(f.var.type ...)
+                                    #'(f.var.binding ...)
+                                    #'f.test
+                                    #'(f.else ...)
+                                    #'(f.else.type ...)
+                                    #'(f.else.binding ...)
+                                    #'(f.var ...)
+                                    #`#,(rest (syntax->list #'f.iterate))
+                                    #'(f.then ...)
+                                    #'(f.then.type ...)
+                                    #'(f.then.binding ...)
+                                    #'(f.colors ...))))])
+       #`(module
+             #,@(syntax-local-introduce
+                 (strip-context
+                  #`(iterator:opengl
+                     racket/base
+                     (provide iterator)
+                     (define iterator the-iterator))))))]))
+
+(define-syntax (define-iterator stx)
+  (syntax-parse stx
+    [i:iterator-definition
+     #`(begin
+         #,(compile-iterator/typed stx)
+         #,(compile-iterator/opengl stx))]))

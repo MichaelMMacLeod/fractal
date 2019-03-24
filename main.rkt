@@ -12,6 +12,8 @@
          racket/sequence
          racket/gui/base)
 
+(the-info (hash))
+
 (command-line
  #:program "fractal"
  #:once-each
